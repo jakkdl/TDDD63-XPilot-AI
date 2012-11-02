@@ -68,16 +68,11 @@ class myai:
             print (id)
             
             if ( id != -1 ):
-                direction = ai.enemyTrackingDegId(int(id))
+                direction = ai.enemyTrackingDegId(id)
                 print (direction)
-                if (direction < selfDirection ):
-                    ai.turnLeft(1)
-                elif (direction > selfDirection ):
-                    ai.turnRight(1)
-
-                #ai.turn(int(direction))
-                if ( math.fabs(selfDirection - direction) < 10):
-                    ai.fireShot()
+                ai.turn(int(direction))
+                #if ( selfDirection) == math.floor(direction) ):
+                ai.fireShot()
             
         
         except:
