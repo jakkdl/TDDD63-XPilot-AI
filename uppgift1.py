@@ -63,16 +63,15 @@ class myai:
             if self.count == 3:
                 self.mode = "ready"
             elif self.mode == "ready":
-                pass
-            id = ai.closestShipId()
-            print (id)
+                id = ai.closestShipId()
+                print (id)
             
-            if ( id != -1 ):
-                direction = ai.enemyTrackingDegId(id)
-                print (direction)
-                ai.turn(int(direction))
-                #if ( selfDirection) == math.floor(direction) ):
-                ai.fireShot()
+                if ( id != -1 ):
+                    direction = ai.enemyTrackingDegId(id)
+                    print (direction)
+                    ai.turn(int(direction))
+                    #if ( selfDirection) == math.floor(direction) ):
+                    ai.fireShot()
             
         
         except:
