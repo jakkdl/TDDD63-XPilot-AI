@@ -1,0 +1,11 @@
+Add stuff you think needs to be done here, as well as make a comment if you're working on it. Also comment if you encounter problems or similar.
+
+
+* Add stuff to this TODO!
+* Finish up uppgift1
+    1. Make it aim properly, and not just spin around
+    2. Make it only shoot if the opponent is in sight, not as soon as it's close
+    3. Make it use some better function so we can use it on longer range?
+* Uppgift2
+    1. Add stuff that needs to be done here
+
