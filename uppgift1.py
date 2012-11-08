@@ -104,8 +104,8 @@ name = "Stub"
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,["-name", name, 
-                  "-join", 
-                  "-fuelMeter", "yes", 
-                  "-showHUD", "no",
-                  "-port", str(port)])
+ai.start(AI_loop,[])#"-name", name, 
+                  #"-join", 
+                  #"-fuelMeter", "yes", 
+                  #"-showHUD", "no",
+                  #"-port", str(port)])

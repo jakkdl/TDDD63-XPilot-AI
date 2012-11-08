@@ -28,35 +28,6 @@ class myai:
         self.count = 0
         self.mode = "init"
 
-    def flyTo(målX,målY):
-	
-        målVinkel=math.tan(((målX+ai.selfX())/(målY+ai.selfX())))
-
-        målVinkel=ai.radToDeg(målVinkel)
-
-        egenVinkel=int(ai.selfHeadingDeg())
-
-        skillnadVinkel=ai.angleDiff(egenVinkel,målVinkel)
-
-        skillnadX=(ai.selfX())-målX
-
-        skillnadY=int(ai.selfY())-målY
-        
-        if skillnadX<6 and skillnadY<6:
-
-            pass
-
-        elif skillnadX<11 and skillnadY<11:
-
-            ai.thrust(0)
-
-        elif skillnadVinkel<5:
-		
-            ai.thrust(1)
-
-        else:
-		
-            ai.turn(skillnadVinkel)
 
 
     def tick(self):
@@ -103,6 +74,35 @@ class myai:
 
    
 	
+def flyTo(targetX,targetY):
+	
+        targetVinkel=math.tan(((targetX+ai.selfX())/(targetY+ai.selfX())))
+
+        targetVinkel=ai.radToDeg(targetVinkel)
+
+        egenVinkel=int(ai.selfHeadingDeg())
+
+        skillnadVinkel=ai.angleDiff(egenVinkel,targetVinkel)
+
+        skillnadX=(ai.selfX())-targetX
+
+        skillnadY=int(ai.selfY())-targetY
+        
+        if skillnadX<6 and skillnadY<6:
+
+            pass
+
+        elif skillnadX<11 and skillnadY<11:
+
+            ai.thrust(0)
+
+        elif skillnadVinkel<5:
+		
+            ai.thrust(1)
+
+        else:
+		
+            ai.turn(skillnadVinkel)
     
 
  
@@ -132,8 +132,8 @@ name = "Stub"
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,["-name", name, 
-                  "-join", 
-                  "-fuelMeter", "yes", 
-                  "-showHUD", "no",
-                  "-port", str(port)])
+ai.start(AI_loop,[])#"-name", name, 
+                  #"-join", 
+                  #"-fuelMeter", "yes", 
+                  #"-showHUD", "no",
+                  #"-port", str(port)])
