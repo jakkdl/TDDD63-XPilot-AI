@@ -64,8 +64,8 @@ class myai:
                 self.mode = "ready"
             elif self.mode == "ready":
                 id = ai.closestShipId()
-                directionX = ai.closestRadarX()
-                directionY = ai.closestRadarY()
+                directionX = ai.screenEnemyXId(id)
+                directionY = ai.screenEnemyYId(id)
                 targetAngle=math.atan2((directionY-ai.selfY()),(directionX-ai.selfX()))
                 targetAngle=ai.radToDeg(targetAngle)
                 selfAngle=int(ai.selfHeadingDeg())
