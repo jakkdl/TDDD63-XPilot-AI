@@ -64,14 +64,18 @@ class myai:
                 self.mode = "ready"
             elif self.mode == "ready":
                 id = ai.closestShipId()
-                print (id)
-            
-                if ( id != -1 ):
-                    direction = ai.enemyTrackingDegId(id)
-                    print (direction)
-                    ai.turn(int(direction))
-                    #if ( selfDirection) == math.floor(direction) ):
-                    ai.fireShot()
+                directionX = ai.closestRadarX()
+                directionY = ai.closestRadarY()
+                targetAngle=math.atan2((directionY-ai.selfY()),(directionX-ai.selfX()))
+                targetAngle=ai.radToDeg(targetAngle)
+                selfAngle=int(ai.selfHeadingDeg())
+                diffAngle=ai.angleDiff(selfAngle,targetAngle)
+                print(id, directionX, directionY, targetAngle, selfAngle, diffAngle)
+                if diffAngle > 0 or diffAngle < 0:
+                     ai.turn(int(diffAngle))
+                    
+                     if diffAngle > -1 and diffAngle < 1:
+                         ai.fireShot()
             
         
         except:
@@ -104,8 +108,8 @@ name = "Stub"
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,[])#"-name", name, 
-                  #"-join", 
-                  #"-fuelMeter", "yes", 
-                  #"-showHUD", "no",
-                  #"-port", str(port)])
+ai.start(AI_loop,["-name", name, 
+                  "-join", 
+                  "-fuelMeter", "yes", 
+                  "-showHUD", "no",
+                  "-port", str(port)])
