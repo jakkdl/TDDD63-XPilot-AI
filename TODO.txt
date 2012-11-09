@@ -3,7 +3,7 @@ Add stuff you think needs to be done here, as well as make a comment if you're w
 
 * Add stuff to this TODO!
 * Finish up uppgift1
-	clean up //hatten almost done
+	clean up //hatten working on it
 * Uppgift2
-    1. Add stuff that needs to be done here!!!!!
+        jobbar med det, använder 1:an som bas/chrille    
 

@@ -1,34 +1,137 @@
-def åktill(målX,målY):
-	
-	MålVinkel=tan(((målX+ai.selfX())/(målY+ai.selfx()))
+#
+# This is the file stub.py that can be used as a starting point for the bots
+#
 
-	Målvinkel=int(målvinkel)
+import libpyAI as ai
 
-	EgenVinkel=int(selfHeadingDeg())
+import sys
+import math
 
-	skillnadVinkel=angleDiff(Egenvinkel,Målvinkel)
+from optparse import OptionParser
 
-	skillnadX=(ai.selfx())-målX
+parser = OptionParser()
 
-	skillnadY=int(ai.selfy())-målY
+parser.add_option ("-g", "--group", action="store", type="int", 
+                   dest="group", default=0, 
+                   help="The group number. Used to avoid port collisions when" 
+                   " connecting to the server.")
 
-	if skillnadX<6 and skllnadY<6:
+#
+# Create a class used to store the internal state of the bot
+#
 
-		pass
+class myai:
+    """Simple Stub for a Bot"""
 
-	elif skillnadX<11 and skillnadY<11:
+    def __init__(self):
+        self.count = 0
+        self.mode = "init"
 
-		ai.thrust(0)
+    def tick(self):
+        try:
 
-	elif skillnadVinkel<5:
+            #
+            # If we die then restart the state machine in the state "init"
+            #
+            if not ai.selfAlive():
+                self.count = 0
+                self.mode = "init"
+                return
+
+            self.count += 1
+
+            #
+            # Read the "sensors"
+            #
+
+            heading = ai.selfHeadingDeg() 
+            # 0-360, 0 in x direction, positive toward y
+
+            speed = ai.selfSpeed()
+            x = ai.selfX()
+            y = ai.selfY()
+            vx = ai.selfVelX()
+            vy = ai.selfVelY()
+            selfDirection = ai.selfTrackingDeg()
+            # Add more sensors readings here if they are needed
+
+            print (self.mode, x, y, vx, vy, speed, heading)
+
+
+            # avoid strange sensor values when starting by waiting
+            # three ticks until we go to ready
+            if self.count == 3:
+                self.mode = "ready"
+            elif self.mode == "ready":
+                
+                targetX=15
+                targetY=15
+                selfDir=ai.selfHeadingDeg()
+                
+                targetAngle=math.atan2((targetY-ai.selfY()),(targetX-ai.selfX()))
+
+                targetAngle=ai.radToDeg(targetAngle)
+                
+                print(targetAngle,selfDir)
+
+                diffAngle=ai.angleDiff(selfDir,targetAngle)
+
+                diffX=int((ai.selfX())-targetX)
+
+                diffY=int((ai.selfY())-targetY)
+
+
+                if diffX<6 and skllnadY<6:
+
+                    pass
+            
+                elif diffX<11 and diffY<11:
+
+                    ai.thrust(0)
+                
+                elif diffAngle<5:
 		
-		ai.thrust(1)
+                    ai.thrust(1)
 
-	else:
+                else:
 		
-		ai.turn(skillnadVinkel)
+                    ai.turn(diffAngle)
 	
-	
-		
-	
-	
+                
+            
+        
+        except:
+            e = sys.exc_info()
+            print ("ERROR: ", e)
+
+#
+# Create an instace of the bot class myai.
+#
+
+bot = myai()
+
+#
+# Connect the bot instance with the AI loop
+#
+
+def AI_loop():
+    bot.tick()
+
+#
+# Parse the command line arguments
+#
+
+(options, args) = parser.parse_args()
+
+port = 15345 + options.group
+name = "Stub"
+
+#
+# Start the main loop. Callback are done to AI_loop.
+#
+
+ai.start(AI_loop,["-name", name, 
+                  "-join", 
+                  "-fuelMeter", "yes", 
+                  "-showHUD", "no",
+                  "-port", str(port)])
