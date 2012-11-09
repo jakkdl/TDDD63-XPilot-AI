@@ -59,29 +59,34 @@ class myai:
 
 
             # avoid strange sensor values when starting by waiting
-            # three ticks until we go to ready
+            # three ticks until we go start aiming
             if self.count == 3:
                 self.mode = "ready"
             elif self.mode == "ready":
-                id = ai.closestShipId()
-                directionX = ai.screenEnemyXId(id)
-                directionY = ai.screenEnemyYId(id)
-                targetAngle=math.atan2((directionY-ai.selfY()),(directionX-ai.selfX()))
-                targetAngle=ai.radToDeg(targetAngle)
-                selfAngle=int(ai.selfHeadingDeg())
-                diffAngle=ai.angleDiff(selfAngle,targetAngle)
-                print(id, directionX, directionY, targetAngle, selfAngle, diffAngle)
-                if diffAngle > 0 or diffAngle < 0:
-                     ai.turn(int(diffAngle))
+                if ai.closestShipId() != -1:
+                    self.mode = "aiming"
+                    print(self.mode)
+            elif self.mode == "aiming":
+                diffAngle=aim(ai.closestShipId())
+                if diffAngle == None:
+                    self.mode == ready
+                elif diffAngle > 3:
+                    ai.turn(diffAngle)
+                else:
+                    ai.turn(diffAngle)
+                    ai.fireShot()
                     
-                     if diffAngle > -5 and diffAngle < 5:
-                         ai.fireShot()
-            
-        
         except:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
+def aim(id):
+    if id == -1:
+        return None
+    targetAngle=ai.radToDeg(math.atan2(ai.screenEnemyYId(id)-ai.selfY(),ai.screenEnemyXId(id)-ai.selfX()))
+    selfAngle=int(ai.selfHeadingDeg())
+    diffAngle=ai.angleDiff(selfAngle, targetAngle)
+    return diffAngle
 #
 # Create an instace of the bot class myai.
 #
