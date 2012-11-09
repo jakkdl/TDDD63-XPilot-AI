@@ -74,7 +74,7 @@ class myai:
                 if diffAngle > 0 or diffAngle < 0:
                      ai.turn(int(diffAngle))
                     
-                     if diffAngle > -1 and diffAngle < 1:
+                     if diffAngle > -5 and diffAngle < 5:
                          ai.fireShot()
             
         
