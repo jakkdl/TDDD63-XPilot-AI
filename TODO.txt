@@ -2,8 +2,8 @@ Add stuff you think needs to be done here, as well as make a comment if you're w
 
 
 * Add stuff to this TODO!
-* Finish up uppgift1
-	clean up //hatten working on it
-* Uppgift2
-        jobbar med det, använder 1:an som bas/chrille    
+uppgift2:
+    make it actually stop
+uppgift3:
+    get to work!
 
