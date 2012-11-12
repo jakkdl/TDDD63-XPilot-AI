@@ -1,3 +1,4 @@
+# -*- coding:Latin-1 -*-
 #
 # This is the file stub.py that can be used as a starting point for the bots
 #
@@ -27,6 +28,8 @@ class myai:
         self.count = 0
         self.mode = "init"
 
+
+
     def tick(self):
         try:
 
@@ -55,7 +58,7 @@ class myai:
             selfDirection = ai.selfTrackingDeg()
             # Add more sensors readings here if they are needed
 
-            print (self.mode, x, y, vx, vy, speed, heading)
+            #print (self.mode, x, y, vx, vy, speed, heading)
 
 
             # avoid strange sensor values when starting by waiting
@@ -63,47 +66,43 @@ class myai:
             if self.count == 3:
                 self.mode = "ready"
             elif self.mode == "ready":
-                
-                targetX=15
-                targetY=15
-                selfDir=ai.selfHeadingDeg()
-                
-                targetAngle=math.atan2((targetY-ai.selfY()),(targetX-ai.selfX()))
-
-                targetAngle=ai.radToDeg(targetAngle)
-                
-                print(targetAngle,selfDir)
-
-                diffAngle=ai.angleDiff(selfDir,targetAngle)
-
-                diffX=int((ai.selfX())-targetX)
-
-                diffY=int((ai.selfY())-targetY)
-
-
-                if diffX<6 and skllnadY<6:
-
-                    pass
-            
-                elif diffX<11 and diffY<11:
-
-                    ai.thrust(0)
-                
-                elif diffAngle<5:
-		
-                    ai.thrust(1)
-
-                else:
-		
-                    ai.turn(diffAngle)
-	
-                
-            
-        
+                flyTo(100,100,self.count)
+      
         except:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
+   
+	
+def flyTo(targetX,targetY,count):
+	
+        targetAngle=math.atan2(targetY-ai.selfY(),targetX-ai.selfX())
+
+        targetAngle=ai.radToDeg(targetAngle)
+
+        egenAngle=int(ai.selfHeadingDeg())
+
+        diffAngle=ai.angleDiff(egenAngle,targetAngle)
+
+        diffX=ai.selfX()-targetX
+
+        diffY=ai.selfY()-targetY
+
+        print(ai.selfX(), ai.selfY(), targetX, targetY)
+        ai.turn(diffAngle)
+        if math.sqrt(diffX*diffX+diffY*diffY) < 10:
+            print("done")
+            pass
+
+        if math.fabs(ai.selfVelX()) + math.fabs(ai.selfVelY()) < 2 and count%10 == 0:
+            print("thrust")
+            ai.thrust(1)
+        else:
+            ai.thrust(0)
+
+
+
+ 
 #
 # Create an instace of the bot class myai.
 #
@@ -130,8 +129,8 @@ name = "Stub"
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,["-name", name, 
-                  "-join", 
-                  "-fuelMeter", "yes", 
-                  "-showHUD", "no",
-                  "-port", str(port)])
+ai.start(AI_loop,[])#"-name", name, 
+                  #"-join", 
+                  #"-fuelMeter", "yes", 
+                  #"-showHUD", "no",
+                  #"-port", str(port)])
