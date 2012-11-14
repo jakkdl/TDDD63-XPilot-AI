@@ -66,7 +66,7 @@ class myai:
             if self.count == 3:
                 self.mode = "ready"
             elif self.mode == "ready":
-                flyTo(100,100,self.count) //sending self.count to be able to use modulus on it, see later in the code.
+                flyTo(100,100,self.count) #sending self.count to be able to use modulus on it, see later in the code.
       
         except:
             e = sys.exc_info()
@@ -92,14 +92,13 @@ def flyTo(targetX,targetY,count):
         ai.turn(diffAngle)
         if math.sqrt(diffX*diffX+diffY*diffY) < 10: #We're done if within a radius of 10 of the point, using pythagoras to calculate radius
             print("done")
-            pass
+            return
 
         #Don't want to fly too fast so we have a reasonable chance to stop within the radius, therefore only thrusting if speed is <2.
         #Using modulus to avoid a cornercase where it thrusts sevaral times in a row when turning around. Also slightly increasing the chance to stop within the radius.
         #These are obviously not enough unless the server have a high friction value. One idea is to turn around and brake and therefore stop the speed. Other ideas are welcome and feel free to implement them.
         #It's always possible to rollback if it changes for the worse.
-        if math.fabs(ai.selfVelX()) + math.fabs(ai.selfVelY()) < 2 and count%10 == 0: 
-            print("thrust")
+        if math.fabs(ai.selfVelX()) + math.fabs(ai.selfVelY()) < 2 and count%10 == 0 and math.sqrt(diffX*diffX+diffY*diffY) > 30:
             ai.thrust(1)
         else:
             ai.thrust(0)
