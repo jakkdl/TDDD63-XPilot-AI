@@ -1,4 +1,4 @@
-# -*- coding:Latin-1 -*-
+
 #
 # This is the file stub.py that can be used as a starting point for the bots
 #
@@ -56,78 +56,37 @@ class myai:
             vx = ai.selfVelX()
             vy = ai.selfVelY()
             selfDirection = ai.selfTrackingDeg()
+            danger = ai.shotAlert(0)
             # Add more sensors readings here if they are needed
+            
+            ai.setTurnSpeed(64.0)
 
-            print (self.mode, x, y, ai.selfRadarX(), ai.selfRadarY(), ai.closestShipId(), ai.screenEnemyXId(ai.closestShipId()), ai.screenEnemyYId(ai.closestShipId()), ai.closestRadarX(), ai.closestRadarY())
-
-
+            print(self.mode, x, ai.shotX(0), "-", y, ai.shotY(0), "-", danger)
             # avoid strange sensor values when starting by waiting
             # three ticks until we go to ready 
-            if self.count == 3 and ai.shotAlert(0) == -1:
-                self.mode = "moving"
-            elif self.mode == "moving":
-                flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
-                if ai.selfVelX() == 0 and ai.selfVelY() == 0 and ai.closestShipId() != -1:
-                    self.mode = "shooting"
-                    print(ai.closestShipId() != -1)
-            elif self.mode == "shooting":
-                    
-                if ai.closestShipId() == -1:
-                    print("moving")
-                    self.mode = "moving"
-            else:
-                    if shoot(ai.closestShipId()) < 3:
-                        ai.fireShot()
             
-            if self.count == 3 and ai.shotAlert(0) > -1:
-                self.mode = "Flee"
-            elif self.mode == "Flee":
-                    dodge(ai.shotX(0), ai.shotY(0), x, y)
-                
+            if self.count == 3:
+                self.mode = "Ready"
+            
+            elif self.mode == "Ready":
+                if danger != -1:   
+                    self.mode = "Dodge"
+                else: 
+                    ai.thrust(0)
+            
+            elif self.mode == "Dodge":
+                    ai.turn(int(dodge(ai.shotX(0), ai.shotY(0), x, y)))
+                    ai.thrust(1)
+                    if danger == -1:
+                        self.mode = "Ready"
+                    else: 
+                        pass
       
         except:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
-   
-def shoot(id):
-    selfX=ai.selfX()
-    selfY=ai.selfY()
-    targetX=ai.screenEnemyXId(id)
-    targetY=ai.screenEnemyYId(id)
-    targetAngle=math.atan2(targetY-selfY,targetX-selfX)
-    targetAngle=ai.radToDeg(targetAngle)
-    egenAngle=int(ai.selfHeadingDeg())
-    diffAngle=ai.angleDiff(egenAngle,targetAngle)
-    ai.turn(diffAngle)
-    return diffAngle
-
-
-    
-def flyTo(targetX,targetY,selfX,selfY):
-
-        targetAngle=math.atan2(targetY-selfY,targetX-selfX)
-
-        targetAngle=ai.radToDeg(targetAngle)
-
-        egenAngle=int(ai.selfHeadingDeg())
-
-        diffAngle=ai.angleDiff(egenAngle,targetAngle)
-
-        #print(selfX, selfY, targetX, targetY)
-        ai.turn(diffAngle)
-        if ai.closestShipId() != -1:
-            print("stopping")
-            ai.thrust(0)
-            return
-
-        if math.fabs(ai.selfVelX()) + math.fabs(ai.selfVelY()) < 5:
-            print("thrust")
-            ai.thrust(1)
-        else:
-            ai.thrust(0)
-
-def dodge(targetX, targetY,selfX,selfY):
+def dodge(targetX, targetY, selfX, selfY):
 
         targetAngle=math.atan2(targetY-selfY,targetX-selfX)
 
@@ -136,15 +95,18 @@ def dodge(targetX, targetY,selfX,selfY):
         selfAngle=int(ai.selfHeadingDeg())
 
         diffAngle=ai.angleDiff(selfAngle,targetAngle)
-
+        
         diffX=selfX-targetX
 
         diffY=selfY-targetY
         
-        ai.turn(-diffAngle/2)
-
         if diffX < 50 and diffX >-50 or diffY < 50 and diffY >-50:
-            ai.thrust(1) 
+            return(-diffAngle/2)
+        else:
+            return(selfAngle)
+        
+        
+        
 #
 # Create an instace of the bot class myai.
 #
