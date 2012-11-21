@@ -69,7 +69,7 @@ class myai:
                 self.mode = "Ready"
             
             elif self.mode == "Ready":
-                if danger != -1:   
+                if danger != -1:    #Triggers "dodge-mode" if a shot is close
                     self.mode = "Dodge"
                 else: 
                     ai.thrust(0)
@@ -77,7 +77,8 @@ class myai:
             elif self.mode == "Dodge":
                     ai.turn(int(dodge(ai.shotX(0), ai.shotY(0), x, y)))
                     ai.thrust(1)
-                    if danger == -1:
+#Below if puts the bot back in ready mode if danger subsides (shot is no longer in the immediate viscinity of the ship).
+                    if danger == -1:  
                         self.mode = "Ready"
                     else: 
                         pass
@@ -87,6 +88,7 @@ class myai:
             print ("ERROR: ", e)
 
 def dodge(targetX, targetY, selfX, selfY):
+#Calculates the angle from the ship to the nearest shot, and if said shot is close enough to the ship to pose a threat, returns half that angle but opposite direction.
 
         targetAngle=math.atan2(targetY-selfY,targetX-selfX)
 
