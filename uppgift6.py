@@ -64,7 +64,7 @@ class myai:
             # avoid strange sensor values when starting by waiting
             # three ticks until we go to ready
             if self.count == 3:
-                self.mode = "moving"
+                self.mode = "ready"
                 if ai.closestShipId() != -1:
                     self.mode = "shooting"
             #elif self.mode == "moving":
@@ -90,16 +90,27 @@ class myai:
 def shoot(id):
     selfX=ai.selfX()
     selfY=ai.selfY()
-    targetX=ai.screenEnemyXId(id)
-    targetY=ai.screenEnemyYId(id)
+    currentX=ai.screenEnemyXId(id)
+    currentY=ai.screenEnemyYId(id)
+    enemyVelocity=ai.enemySpeedId(id)
+    enemyTracking=ai.enemyTrackingRadId(id)
+    enemyVelocityX=enemyVelocity*math.cos(enemyTracking)
+    enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
+    bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
+
+    time=timeOfImpact(selfX, selfY, currentX, currentY, enemyVelocityX, enemyVelocityY, bulletVelocity)
+
+    targetX=currentX+enemyVelocityX*time
+    targetY=currentY+enemyVelocityY*time
     targetAngle=math.atan2(targetY-selfY,targetX-selfX)
     targetAngle=ai.radToDeg(targetAngle)
     egenAngle=int(ai.selfHeadingDeg())
     diffAngle=ai.angleDiff(egenAngle,targetAngle)
+
     ai.turn(diffAngle)
     return diffAngle
 
-def timeOfImpact(enemyX, enemyY, targetSpeedX, targetSpeedY, bulletSpeed) #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed) #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
     relativeX=enemyX-ai.selfX()
     relativeY=enemyY-ai.selfY()
     a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
@@ -117,18 +128,12 @@ def timeOfImpact(enemyX, enemyY, targetSpeedX, targetSpeedY, bulletSpeed) #copy-
 
     return time
 	
-def flyTo(targetX,targetY,selfX,selfY):
-
+def flyTo(targetX,targetY,selfX,selfY): #not used in this one
         targetAngle=math.atan2(targetY-selfY,targetX-selfX)
-
         targetAngle=ai.radToDeg(targetAngle)
-
         egenAngle=int(ai.selfHeadingDeg())
-
         diffAngle=ai.angleDiff(egenAngle,targetAngle)
-
         diffX=selfX-targetX
-
         diffY=selfY-targetY
 
         #print(selfX, selfY, targetX, targetY)
