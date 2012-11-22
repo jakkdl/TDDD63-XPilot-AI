@@ -87,25 +87,45 @@ class myai:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
-def dodge(targetX, targetY, selfX, selfY):
-#Calculates the angle from the ship to the nearest shot, and if said shot is close enough to the ship to pose a threat, returns half that angle but opposite direction.
+def dodge(idx):
+    shotX=ai.shotX(idx)
+    shotY=ai.shotY(idx)
+    currentX=ai.selfX()
+    currentY=ai.selfY()
+    selfVelocity=ai.selfSpeed()
+    enemyTracking=ai.shotVelDir(idx)
+    selfVelocityX=selfVelocity*math.cos(enemyTracking)
+    selfVelocityY=selfVelocity*math.sin(enemyTracking)
+    bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
 
-        targetAngle=math.atan2(targetY-selfY,targetX-selfX)
+    time=timeOfImpact(shotX, shotY, currentX, currentY, selfVelocityX, selfVelocityY, bulletVelocity)
 
-        targetAngle=ai.radToDeg(targetAngle)
+    targetX=shotX+selfVelocityX*time
+    targetY=shotY+selfVelocityY*time
+    targetAngle=math.atan2(targetY-selfY,targetX-selfX)
+    targetAngle=ai.radToDeg(targetAngle)
+    ownAngle=int(ai.selfHeadingDeg())
+    diffAngle=ai.angleDiff(ownAngle,targetAngle)
 
-        selfAngle=int(ai.selfHeadingDeg())
+    return diffAngle
 
-        diffAngle=ai.angleDiff(selfAngle,targetAngle)
-        
-        diffX=selfX-targetX
+def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed) #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+    relativeX=enemyX-ai.selfX()
+    relativeY=enemyY-ai.selfY()
+    a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
+    b=relativeX*targetSpeedX+relativeY*targetSpeedY
+    c=relativeX*relativeX+relativeY*relativeY
 
-        diffY=selfY-targetY
-        
-        if diffX < 50 and diffX >-50 or diffY < 50 and diffY >-50:
-            return(-diffAngle/2)
-        else:
-            return(selfAngle)
+    d=b*b+a*c
+    
+    time=0
+
+    if d >= 0:
+        time = ( b + math.sqrt(d) ) /a
+        if time < 0
+            time = 0
+
+    return time
         
         
         
