@@ -65,6 +65,7 @@ class myai:
             # three ticks until we go to ready
             if self.count == 3:
                 self.mode = "ready"
+            elif self.mode =="ready":
                 if ai.closestShipId() != -1:
                     self.mode = "shooting"
             #elif self.mode == "moving":
@@ -77,6 +78,7 @@ class myai:
                     print("ready")
                     self.mode = "ready"
                 else:
+                    shoot(ai.closestShipId())
                     if shoot(ai.closestShipId()) < 3:
                         ai.fireShot()
                     
@@ -110,9 +112,10 @@ def shoot(id):
     ai.turn(diffAngle)
     return diffAngle
 
-def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed) #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
-    relativeX=enemyX-ai.selfX()
-    relativeY=enemyY-ai.selfY()
+def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed): #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+
+    relativeX=targetX-ai.selfX()
+    relativeY=targetY-ai.selfY()
     a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
     b=relativeX*targetSpeedX+relativeY*targetSpeedY
     c=relativeX*relativeX+relativeY*relativeY
@@ -123,7 +126,7 @@ def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bul
 
     if d >= 0:
         time = ( b + math.sqrt(d) ) /a
-        if time < 0
+        if time < 0:
             time = 0
 
     return time
@@ -178,8 +181,8 @@ name = "Stub"
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,[])#"-name", name, 
-                  #"-join", 
+ai.start(AI_loop,["-name", name, 
+                  "-join", 
                   #"-fuelMeter", "yes", 
                   #"-showHUD", "no",
-                  #"-port", str(port)])
+                  "-port", str(port)])
