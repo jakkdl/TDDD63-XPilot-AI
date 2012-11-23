@@ -1,4 +1,3 @@
-
 #
 # This is the file stub.py that can be used as a starting point for the bots
 #
@@ -56,64 +55,65 @@ class myai:
             vx = ai.selfVelX()
             vy = ai.selfVelY()
             selfDirection = ai.selfTrackingDeg()
-            danger = ai.shotAlert(0)
             # Add more sensors readings here if they are needed
-            
-            ai.setTurnSpeed(64.0)
 
-            print(self.mode, x, ai.shotX(0), "-", y, ai.shotY(0), "-", danger)
+            print (self.mode, ai.shotVel(0), ai.shotVelDir(0))
+
+
             # avoid strange sensor values when starting by waiting
-            # three ticks until we go to ready 
-            
+            # three ticks until we go to ready
             if self.count == 3:
-                self.mode = "Ready"
-            
-            elif self.mode == "Ready":
-                if danger != -1 and ai.shotDist(0) < 100: #Triggers "dodge-mode" if a shot is close
-                    self.mode = "Dodge"
-                else: 
-                    ai.thrust(0)
-            
-            elif self.mode == "Dodge":
-                if dodge(0) >= 0:
-                    ai.turn(int(-dodge(0)+45))
-                    ai.thrust(1)
+                self.mode = "ready"
+            elif self.mode =="ready":
+                if ai.closestShipId() == -1:
+                    self.mode = "moving"
+                elif ai.closestShipId() != -1:
+                    self.mode = "shooting"
+            elif self.mode == "moving":
+                flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
+                if ai.selfVelX() < 2 and ai.selfVelY() < 2 and ai.closestShipId() != -1:
+                    self.mode = "shooting"
+                    print(ai.closestShipId() != -1)
+            elif self.mode == "shooting":
+                if ai.closestShipId() == -1:
+                    self.mode = "ready"
                 else:
-                    ai.turn(int(dodge(0)-45))
-                    ai.thrust(1)
-#Below if puts the bot back in ready mode if danger subsides (shot is no longer in the immediate viscinity of the ship).
-                    if ai.shotDist(0) > 100 or danger == -1:  
-                        self.mode = "Ready"
-            
+                    shoot(ai.closestShipId())
+                    if shoot(ai.closestShipId()) < 3:
+                        ai.fireShot()
+                    
+                
       
         except:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
-def dodge(idx):
-    shotX=ai.shotX(idx)
-    shotY=ai.shotY(idx)
-    currentX=ai.selfX()
-    currentY=ai.selfY()
-    selfVelocity=ai.selfSpeed()
-    enemyTracking=ai.shotVelDir(idx)
-    selfVelocityX=selfVelocity*math.cos(enemyTracking)
-    selfVelocityY=selfVelocity*math.sin(enemyTracking)
+   
+def shoot(id):
+    selfX=ai.selfX()
+    selfY=ai.selfY()
+    currentX=ai.screenEnemyXId(id)
+    currentY=ai.screenEnemyYId(id)
+    enemyVelocity=ai.enemySpeedId(id)
+    enemyTracking=ai.enemyTrackingRadId(id)
+    enemyVelocityX=enemyVelocity*math.cos(enemyTracking)
+    enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
     bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
 
-    time=timeOfImpact(shotX, shotY, currentX, currentY, selfVelocityX, selfVelocityY, bulletVelocity)
+    time=timeOfImpact(selfX, selfY, currentX, currentY, enemyVelocityX, enemyVelocityY, bulletVelocity)
 
-    targetX=shotX+selfVelocityX*time
-    targetY=shotY+selfVelocityY*time
-    targetAngle=math.atan2(targetY-currentY,targetX-currentX)
+    targetX=currentX+enemyVelocityX*time
+    targetY=currentY+enemyVelocityY*time
+    targetAngle=math.atan2(targetY-selfY,targetX-selfX)
     targetAngle=ai.radToDeg(targetAngle)
-    ownAngle=int(ai.selfHeadingDeg())
-    
-    diffAngle=ai.angleDiff(ownAngle,targetAngle)
-    
+    egenAngle=int(ai.selfHeadingDeg())
+    diffAngle=ai.angleDiff(egenAngle,targetAngle)
+
+    ai.turn(diffAngle)
     return diffAngle
 
 def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed): #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+
     relativeX=targetX-ai.selfX()
     relativeY=targetY-ai.selfY()
     a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
@@ -130,9 +130,31 @@ def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bul
             time = 0
 
     return time
-        
-        
-        
+	
+def flyTo(targetX,targetY,selfX,selfY): #not used in this one
+        targetAngle=math.atan2(targetY-selfY,targetX-selfX)
+        targetAngle=ai.radToDeg(targetAngle)
+        egenAngle=int(ai.selfHeadingDeg())
+        diffAngle=ai.angleDiff(egenAngle,targetAngle)
+        diffX=selfX-targetX
+        diffY=selfY-targetY
+
+        #print(selfX, selfY, targetX, targetY)
+        ai.turn(diffAngle)
+        if ai.closestShipId() != -1:
+            print("stopping")
+            ai.thrust(0)
+            return
+
+        if math.fabs(ai.selfVelX()) + math.fabs(ai.selfVelY()) < 10:
+            print("thrust")
+            ai.thrust(1)
+        else:
+            ai.thrust(0)
+
+
+
+ 
 #
 # Create an instace of the bot class myai.
 #
@@ -153,7 +175,7 @@ def AI_loop():
 (options, args) = parser.parse_args()
 
 port = 15345 + options.group
-name = "PorkMonger"
+name = "Stub"
 
 #
 # Start the main loop. Callback are done to AI_loop.
@@ -161,6 +183,6 @@ name = "PorkMonger"
 
 ai.start(AI_loop,["-name", name, 
                   "-join", 
-                  "-fuelMeter", "yes", 
-                  "-showHUD", "no",
+                  #"-fuelMeter", "yes", 
+                  #"-showHUD", "no",
                   "-port", str(port)])
