@@ -6,10 +6,15 @@ Add stuff you think needs to be done here, as well as make a comment if you're w
 uppgift4:
     Could use some tweaking, but fuck it for now.
 
-uppgift6:
-done?
+uppgift 1-7: Approved.
+However, I have completely rewritten the entire uppgift4 largely basing it on uppgift 6, thusly it is no longer, in current form, working as well as I would like, though it is better than the old version . I will have it working as intended shortly.
 
-uppgift7: 
-working on it -Magnus
+uppgift8: 
+Near done.
+
+We need to do 9-10, and we can skip 11. To quote mr. dude: "You can get 11 approved by just running two 9s".
+The follow thingy on assignment 10 we can accomplish by just making a script to chase, but make sure it stops and avoids colliding if the leader ship stops.
+
+After that we need the "real" assignments. He recommends us to do 1,2 and then 5. Then proceed with 3,4 if we have time.
 
 Otherwise, rock on
