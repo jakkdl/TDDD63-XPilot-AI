@@ -71,16 +71,16 @@ class myai:
                     self.mode = "shooting"
             elif self.mode == "moving":
                 flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
-                if ai.selfVelX() < 2 and ai.selfVelY() < 2 and ai.closestShipId() != -1:
+                if ai.closestShipId() != -1:
                     self.mode = "shooting"
-                    print(ai.closestShipId() != -1)
             elif self.mode == "shooting":
                 if ai.closestShipId() == -1:
                     self.mode = "ready"
                 else:
+                    #degreeDiff=
                     shoot(ai.closestShipId())
-                    if shoot(ai.closestShipId()) < 3:
-                        ai.fireShot()
+                    #if degreeDiff < 3:
+                    ai.fireShot()
                     
                 
       
@@ -92,18 +92,35 @@ class myai:
 def shoot(id):
     selfX=ai.selfX()
     selfY=ai.selfY()
-    currentX=ai.screenEnemyXId(id)
-    currentY=ai.screenEnemyYId(id)
+    selfVelocity=ai.selfSpeed()
+    selfTracking=ai.selfTrackingRad()
+    if math.isnan(selfTracking):
+        selfTracking=0
+    selfVelocityX=selfVelocity*math.cos(selfTracking)
+    selfVelocityY=selfVelocity*math.sin(selfTracking)
+
+
+
+    enemyX=ai.screenEnemyXId(id)
+    enemyY=ai.screenEnemyYId(id)
     enemyVelocity=ai.enemySpeedId(id)
     enemyTracking=ai.enemyTrackingRadId(id)
+    if math.isnan(enemyTracking):
+        enemyTracking=0
     enemyVelocityX=enemyVelocity*math.cos(enemyTracking)
     enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
-    bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
+    bulletVelocity=10 #emptybordernofriction.xp
 
-    time=timeOfImpact(selfX, selfY, currentX, currentY, enemyVelocityX, enemyVelocityY, bulletVelocity)
+    relativeX=enemyX-selfX
+    relativeY=enemyY-selfY
+    relativeVelocityX=enemyVelocityX-selfVelocityX
+    relativeVelocityY=enemyVelocityY-selfVelocityY
 
-    targetX=currentX+enemyVelocityX*time
-    targetY=currentY+enemyVelocityY*time
+
+    time=timeOfImpact(relativeX, relativeY, relativeVelocityX, relativeVelocityY, bulletVelocity)
+
+    targetX=enemyX+enemyVelocityX*time
+    targetY=enemyY+enemyVelocityY*time
     targetAngle=math.atan2(targetY-selfY,targetX-selfX)
     targetAngle=ai.radToDeg(targetAngle)
     egenAngle=int(ai.selfHeadingDeg())
@@ -112,10 +129,8 @@ def shoot(id):
     ai.turn(diffAngle)
     return diffAngle
 
-def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed): #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 
-    relativeX=targetX-ai.selfX()
-    relativeY=targetY-ai.selfY()
     a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
     b=relativeX*targetSpeedX+relativeY*targetSpeedY
     c=relativeX*relativeX+relativeY*relativeY
@@ -131,7 +146,7 @@ def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bul
 
     return time
 	
-def flyTo(targetX,targetY,selfX,selfY): #not used in this one
+def flyTo(targetX,targetY,selfX,selfY):
         targetAngle=math.atan2(targetY-selfY,targetX-selfX)
         targetAngle=ai.radToDeg(targetAngle)
         egenAngle=int(ai.selfHeadingDeg())
@@ -139,7 +154,6 @@ def flyTo(targetX,targetY,selfX,selfY): #not used in this one
         diffX=selfX-targetX
         diffY=selfY-targetY
 
-        #print(selfX, selfY, targetX, targetY)
         ai.turn(diffAngle)
         if ai.closestShipId() != -1:
             print("stopping")
@@ -181,8 +195,8 @@ name = "Stub"
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,["-name", name, 
-                  "-join", 
+ai.start(AI_loop,[])#"-name", name, 
+                  #"-join", 
                   #"-fuelMeter", "yes", 
                   #"-showHUD", "no",
-                  "-port", str(port)])
+                  #"-port", str(port)])
