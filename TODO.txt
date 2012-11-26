@@ -8,10 +8,10 @@ Introdoctury assignments
     I have completely rewritten the entire uppgift4 largely basing it on uppgift 6, thusly it is no longer, in current form, working as well as I would like, though it is better than the old version . I will have it working as intended shortly. //magnus
 
     6:          (approved)
-        *Improve aiming //hatten on it
+        *Aiming can still be improved.
 
     7:          (approved)
-        *Insert the improved aiming from 6 when it's done
+        *Aiming can still be improved
 
     8: 
         *Near done.
