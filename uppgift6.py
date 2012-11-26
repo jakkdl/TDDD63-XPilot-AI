@@ -78,8 +78,8 @@ class myai:
                     print("ready")
                     self.mode = "ready"
                 else:
-                    shoot(ai.closestShipId())
-                    if shoot(ai.closestShipId()) < 3:
+                    degreeDiff=shoot(ai.closestShipId())
+                    if degreeDiff < 3:
                         ai.fireShot()
                     
                 
@@ -92,8 +92,17 @@ class myai:
 def shoot(id):
     selfX=ai.selfX()
     selfY=ai.selfY()
-    currentX=ai.screenEnemyXId(id)
-    currentY=ai.screenEnemyYId(id)
+    selfVelocity=ai.selfSpeed()
+    selfTracking=ai.selfTrackingRad()
+    if math.isnan(selfTracking):
+        selfTracking=0
+    selfVelocityX=selfVelocity*math.cos(selfTracking)
+    selfVelocityY=selfVelocity*math.sin(selfTracking)
+
+
+
+    enemyX=ai.screenEnemyXId(id)
+    enemyY=ai.screenEnemyYId(id)
     enemyVelocity=ai.enemySpeedId(id)
     enemyTracking=ai.enemyTrackingRadId(id)
     if math.isnan(enemyTracking):
@@ -102,10 +111,16 @@ def shoot(id):
     enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
     bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
 
-    time=timeOfImpact(selfX, selfY, currentX, currentY, enemyVelocityX, enemyVelocityY, bulletVelocity)
+    relativeX=enemyX-selfX
+    relativeY=enemyY-selfY
+    relativeVelocityX=enemyVelocityX-selfVelocityX
+    relativeVelocityY=enemyVelocityY-selfVelocityY
 
-    targetX=currentX+enemyVelocityX*time
-    targetY=currentY+enemyVelocityY*time
+
+    time=timeOfImpact(relativeX, relativeY, relativeVelocityX, relativeVelocityY, bulletVelocity)
+
+    targetX=enemyX+enemyVelocityX*time
+    targetY=enemyY+enemyVelocityY*time
     targetAngle=math.atan2(targetY-selfY,targetX-selfX)
     targetAngle=ai.radToDeg(targetAngle)
     egenAngle=int(ai.selfHeadingDeg())
@@ -114,10 +129,8 @@ def shoot(id):
     ai.turn(diffAngle)
     return diffAngle
 
-def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed): #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 
-    relativeX=targetX-ai.selfX()
-    relativeY=targetY-ai.selfY()
     a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
     b=relativeX*targetSpeedX+relativeY*targetSpeedY
     c=relativeX*relativeX+relativeY*relativeY
