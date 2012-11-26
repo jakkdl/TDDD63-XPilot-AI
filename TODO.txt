@@ -9,7 +9,6 @@ Introdoctury assignments
 
     6:          (approved)
         *Improve aiming //hatten on it
-        *Mysteriously starts machinegunning the wall sometimes
 
     7:          (approved)
         *Insert the improved aiming from 6 when it's done
