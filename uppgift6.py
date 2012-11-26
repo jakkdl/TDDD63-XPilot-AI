@@ -72,15 +72,14 @@ class myai:
                 #flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
                 #if ai.selfVelX() == 0 and ai.selfVelY() == 0 and ai.closestShipId() != -1:
                     #self.mode = "shooting"
-                    #print(ai.closestShipId() != -1)
             elif self.mode == "shooting":
                 if ai.closestShipId() == -1:
-                    print("ready")
                     self.mode = "ready"
                 else:
-                    degreeDiff=shoot(ai.closestShipId())
-                    if degreeDiff < 3:
-                        ai.fireShot()
+                    #degreeDiff=
+                    shoot(ai.closestShipId())
+                    #if degreeDiff < 3:
+                    ai.fireShot()
                     
                 
       
@@ -154,7 +153,6 @@ def flyTo(targetX,targetY,selfX,selfY): #not used in this one
         diffX=selfX-targetX
         diffY=selfY-targetY
 
-        #print(selfX, selfY, targetX, targetY)
         ai.turn(diffAngle)
         if ai.closestShipId() != -1:
             print("stopping")
