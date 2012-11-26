@@ -96,6 +96,8 @@ def shoot(id):
     currentY=ai.screenEnemyYId(id)
     enemyVelocity=ai.enemySpeedId(id)
     enemyTracking=ai.enemyTrackingRadId(id)
+    if math.isnan(enemyTracking):
+        enemyTracking=0
     enemyVelocityX=enemyVelocity*math.cos(enemyTracking)
     enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
     bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
@@ -181,8 +183,8 @@ name = "Stub"
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,["-name", name, 
-                  "-join", 
+ai.start(AI_loop,[])#"-name", name, 
+                  #"-join", 
                   #"-fuelMeter", "yes", 
                   #"-showHUD", "no",
-                  "-port", str(port)])
+                  #"-port", str(port)])
