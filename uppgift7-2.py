@@ -65,22 +65,24 @@ class myai:
             if self.count == 3:
                 self.mode = "ready"
             elif self.mode =="ready":
+                ai.setTurnSpeed(64.0)
                 if ai.closestShipId() == -1:
                     self.mode = "moving"
                 elif ai.closestShipId() != -1:
                     self.mode = "shooting"
             elif self.mode == "moving":
-                flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
+                #flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
                 if ai.closestShipId() != -1:
                     self.mode = "shooting"
             elif self.mode == "shooting":
                 if ai.closestShipId() == -1:
                     self.mode = "ready"
                 else:
-                    #degreeDiff=
                     shoot(ai.closestShipId())
-                    #if degreeDiff < 3:
-                    ai.fireShot()
+            
+                   
+                    
+                    
                     
                 
       
@@ -125,8 +127,13 @@ def shoot(id):
     targetAngle=ai.radToDeg(targetAngle)
     egenAngle=int(ai.selfHeadingDeg())
     diffAngle=ai.angleDiff(egenAngle,targetAngle)
-
+    
     ai.turn(diffAngle)
+    targetDist=math.sqrt((relativeX*relativeX)+(relativeY*relativeY))//1
+    if diffAngle<5:
+        ai.fireShot()
+    elif diffAngle<20 and targetDist<5:
+        ai.fireShot()
     return diffAngle
 
 def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
@@ -153,6 +160,8 @@ def flyTo(targetX,targetY,selfX,selfY):
         diffAngle=ai.angleDiff(egenAngle,targetAngle)
         diffX=selfX-targetX
         diffY=selfY-targetY
+        targetDist=math.sqrt((diffX*diffX)+(diffY*diffY))//1
+        
 
         ai.turn(diffAngle)
         if ai.closestShipId() != -1:
@@ -160,14 +169,23 @@ def flyTo(targetX,targetY,selfX,selfY):
             ai.thrust(0)
             return
 
-        if math.fabs(ai.selfVelX()) + math.fabs(ai.selfVelY()) < 10:
-            print("thrust")
+        if ai.selfSpeed()< 5 and ((diffAngle>20 and diffAngle<180)or(diffAngle<-20 and diffAngle>-180)):
+            print("thrust",targetDist)
             ai.thrust(1)
+            print(ai.selfSpeed(),diffX,diffY)
+        elif targetDist>5:
+            print("target>5",diffAngle)
+            if diffAngle<10 and diffAngle>-10 and ai.selfSpeed()<20:
+                    ai.thrust(1)
+            else:
+                ai.thrust(0)
         else:
             ai.thrust(0)
+        
 
 
 
+    
  
 #
 # Create an instace of the bot class myai.
