@@ -1,6 +1,10 @@
 Add stuff you think needs to be done here, as well as make a comment if you're working on it. Also comment if you encounter problems or similar.
 
 
+Write a User Manual (this is supposed to be written incrementally during the project, so we should start immediately)
+
+Write Technical overview (this is supposed to be written incrementally during the project, so we should start immediately)
+
 Introdoctury assignments
     1,2,3,5:      (approved)
 
