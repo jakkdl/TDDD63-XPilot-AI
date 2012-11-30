@@ -49,19 +49,17 @@ class myai:
 
             heading = ai.selfHeadingDeg() 
             # 0-360, 0 in x direction, positive toward y
-
             speed = ai.selfSpeed()
             x = ai.selfX()
             y = ai.selfY()
             vx = ai.selfVelX()
             vy = ai.selfVelY()
             selfDirection = ai.selfTrackingDeg()
-            danger = ai.shotAlert(0)
             # Add more sensors readings here if they are needed
             
             ai.setTurnSpeed(64.0)
 
-            print(self.mode, x, ai.shotX(0), "-", y, ai.shotY(0), "-", danger)
+            print(self.mode, x, ai.shotX(0), "-", y, ai.shotY(0), "-")
             # avoid strange sensor values when starting by waiting
             # three ticks until we go to ready 
             
@@ -69,67 +67,136 @@ class myai:
                 self.mode = "Ready"
             
             elif self.mode == "Ready":
-                if danger != -1 and ai.shotDist(0) < 100: #Triggers "dodge-mode" if a shot is close
+                if danger() != False:
                     self.mode = "Dodge"
                 else: 
                     ai.thrust(0)
             
             elif self.mode == "Dodge":
-                if dodge(0) >= 0:
-                    ai.turn(int(-dodge(0)+45))
+                dodge(danger())
+                if speed < 3:
                     ai.thrust(1)
-                else:
-                    ai.turn(int(dodge(0)-45))
-                    ai.thrust(1)
-#Below if puts the bot back in ready mode if danger subsides (shot is no longer in the immediate viscinity of the ship).
-                    if ai.shotDist(0) > 100 or danger == -1:  
-                        self.mode = "Ready"
+                elif danger() == False:
+                    self.mode = "Ready"
+                
+                
+#Below if puts the bot back in ready mode if danger subsides.                                                          .
+                if danger() == False:
+                    self.mode = "Ready"
             
       
         except:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
-def dodge(idx):
-    shotX=ai.shotX(idx)
-    shotY=ai.shotY(idx)
-    currentX=ai.selfX()
-    currentY=ai.selfY()
-    selfVelocity=ai.selfSpeed()
-    enemyTracking=ai.shotVelDir(idx)
-    selfVelocityX=selfVelocity*math.cos(enemyTracking)
-    selfVelocityY=selfVelocity*math.sin(enemyTracking)
-    bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
+def dodge(degrees):
+    ai.turn(degrees)
 
-    time=timeOfImpact(shotX, shotY, currentX, currentY, selfVelocityX, selfVelocityY, bulletVelocity)
+#Calculates the straight line equation, and returns the k and m values.
+def straightLine(x, y, velX, velY):
+    valueK = velY/velX
+    valueM = y-x*valueK
+    returnList = [valueK, valueM]
+    return(returnList)
 
-    targetX=shotX+selfVelocityX*time
-    targetY=shotY+selfVelocityY*time
-    targetAngle=math.atan2(targetY-currentY,targetX-currentX)
-    targetAngle=ai.radToDeg(targetAngle)
-    ownAngle=int(ai.selfHeadingDeg())
-    
-    diffAngle=ai.angleDiff(ownAngle,targetAngle)
-    
-    return diffAngle
+#Checks whether, and where, two straight lines will intersect. Returns a value for (x,y) where the lines cross.
+def intersection(selfLine, shotLine):
+    valueX = (selfLine[1]-shotLine[1])/(selfLine[0]-shotLine[0])
+    valueY = selfLine[0]*valueX+selfLine[1]
+    returnList = [valueX, valueY]
+    if not selfLine or not shotLine:
+        return("Error, wrong input to intersection function")
+    elif selfLine[0] == shotLine[0]:
+        return(False)
+    else: 
+        return(returnList)
 
-def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed): #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
-    relativeX=targetX-ai.selfX()
-    relativeY=targetY-ai.selfY()
-    a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
-    b=relativeX*targetSpeedX+relativeY*targetSpeedY
-    c=relativeX*relativeX+relativeY*relativeY
+#Calculates the amount of time until the lines intercept. The straight line equations are calculated based on the directional velocity of the objects, thusly the resulting x value can be used as a measurement of time to check whether they will reach the intercept point at the same time, otherwise we are still safe on current course.
+def time(intersectCoords, returnList):
+    intersectY = intersectCoords[1]
+    intersectTime = 0
+    if not returnList:
+        return("Error, incorrect input to time function")
+    else: 
+        intersectTime = intersectY/returnList[0] - returnList[1]
+        return(intersectTime)
 
-    d=b*b+a*c
-    
-    time=0
+#Calculates the danger of every shot in the immediate viscinity of the ship, using above functions. Returns a 5 degree turn adjustment, positive or negative depending on which small evasion is needed. If this is insufficient the next tick will catch it and force another 5 degree adjustment.
+def danger():
+    enId = ai.closestShipId()
+    selfX = ai.selfX()
+    selfY = ai.selfY()
+    selfVel = ai.selfSpeed()
+    selfVelX = ai.selfVelX()
+    selfVelY = ai.selfVelY()
+    for i in range(99):
+        if ai.shotAlert(i) != -1:
+            shotX = ai.shotX(i)
+            shotY = ai.shotY(i)
+            shotTrack = ai.shotVelDir(i)
+            shotVel = 10 + ai.enemySpeedId(enId) # The 10 may vary depending on map, adjust accordingly.
+            shotVelX = shotVel*math.cos(shotTrack)
+            shotVelY = shotVel*math.sin(shotTrack)
+ 
+            if ai.shotDist(i) > 200:
+                return(False)
 
-    if d >= 0:
-        time = ( b + math.sqrt(d) ) /a
-        if time < 0:
-            time = 0
+            elif selfVel > 0 and intersection(straightLine(selfX, selfY, selfVelX, selfVelY), straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+                return(False)
+            
+            elif selfVel == 0 and intersection([selfX, selfY], straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+                return(False)
 
-    return time
+            elif ai.shotDist(i) < 200 and selfVel > 0:
+                intersectCoords = intersection(straightLine(selfX, selfY, selfVelX, selfVelY), straightLine(shotX, shotY, shotVelX, shotVelY))
+                selfStraightLine = straightLine(selfX, selfY, selfVelX, selfVelY)
+                shotStraightLine = straightLine(shotX, shotY, shotVelX, shotVelY)
+                selfTimer = time(intersectCoords, selfStraightLine)
+                shotTimer = time(intersectCoords, shotStraightLine)
+     
+                if selfTimer - shotTimer > 15 or selfTimer - shotTimer < -15: #Tentative values, to be adjusted as needed.
+                    pass
+               
+                else:
+                    if selfX < shotX:
+                        return(5) 
+                    elif selfX > shotX:
+                        return(-5)
+                    else:
+                        if selfY < shotY: 
+                            return(-5)
+                        elif selfY > shotY:
+                            return(5)
+
+            elif ai.shotDist(i) < 200 and selfVel == 0:
+                intersectCoords = intersection([selfX, selfY], straightLine(shotX, shotY, shotVelX, shotVelY))
+                selfStraightLine = [1, selfY]
+                shotStraightLine = straightLine(shotX, shotY, shotVelX, shotVelY)
+                selfTimer = time(intersectCoords, selfStraightLine)
+                shotTimer = time(intersectCoords, shotStraightLine)
+     
+                if selfTimer - shotTimer > 5 or selfTimer - shotTimer < -5: #Tentative values, to be adjusted as needed.
+                    pass
+               
+                else:
+                    if selfX < shotX:
+                        return(5) 
+                    elif selfX > shotX:
+                        return(-5)
+                    else:
+                        if selfY < shotY: 
+                            return(-5)
+                        elif selfY > shotY:
+                            return(5)
+
+
+
+
+
+        elif ai.shotAlert(i) == -1:
+            return(False)
+
+
         
         
         
@@ -153,7 +220,7 @@ def AI_loop():
 (options, args) = parser.parse_args()
 
 port = 15345 + options.group
-name = "PorkMonger"
+name = "Nemesis Divina"
 
 #
 # Start the main loop. Callback are done to AI_loop.
