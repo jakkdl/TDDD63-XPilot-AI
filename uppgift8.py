@@ -1,7 +1,7 @@
 #
 # This is the file stub.py that can be used as a starting point for the bots
 #
-
+import time
 import libpyAI as ai
 
 import sys
@@ -27,162 +27,7 @@ class myai:
         self.count = 0
         self.mode = "init"
 
-
-
-    def tick(self):
-        try:
-
-            #
-            # If we die then restart the state machine in the state "init"
-            #
-            if not ai.selfAlive():
-                self.count = 0
-                self.mode = "init"
-                return
-
-            self.count += 1
-
-            #
-            # Read the "sensors"
-            #
-            radarx = ai.selfRadarX()   # Just read to demo how it works
-            radary = ai.selfRadarY()   # Just read to demo how it works
-            
-            # read heading and compute the direction we are moving in if any
-            heading = ai.selfHeadingDeg() # 0-360, 0 in x direction, positive toward y
-            direction = heading
-            if vx != 0 or vy != 0:
-                direction = math.degrees (math.atan2 (vy, vx))
-
-            heading = ai.selfHeadingDeg() 
-            # 0-360, 0 in x direction, positive toward y
-
-            speed = ai.selfSpeed()
-            x = ai.selfX()
-            y = ai.selfY()
-            vx = ai.selfVelX()
-            vy = ai.selfVelY()
-            selfDirection = ai.selfTrackingDeg()
-            # Add more sensors readings here if they are needed
-
-            print (self.mode, ai.shotVel(0), ai.shotVelDir(0))
-
-
-            # avoid strange sensor values when starting by waiting
-            # three ticks until we go to ready
-            if self.count == 3:
-                self.mode = "ready"
-            elif self.mode =="ready":
-                if ai.closestShipId() == -1:
-                    self.mode = "moving"
-                elif ai.closestShipId() != -1:
-                    self.mode = "shooting"
-            elif self.mode == "moving":
-                flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
-                 elif self.mode == "fly":
-                self.wanted_minimal_speed = 2
-                # check if we are near walls if flying
-                if self.check_wall(200):
-                    print ("WALL")
-                    self.wanted_heading += 180
-                    self.wanted_heading %= 360
-                    print ("Wanted heading:", self.wanted_heading)
-                    self.mode = "turning"
-                    self.wanted_minimal_speed = 0
-                    
-            #
-            # Wait until wanted heading is achieved. Then go to state waitnowall.
-            #
-            elif self.mode == "turning":
-                if abs (ai.angleDiff (int(heading), int(self.wanted_heading))) < 2:
-                    self.mode = "waitnowall"
-
-            elif self.mode == "waitnowall":
-                if not self.check_wall(200):
-                    self.mode = "moving"
-                if ai.selfVelX() < 2 and ai.selfVelY() < 2 and ai.closestShipId() != -1:
-                    self.mode = "shooting"
-                    print(ai.closestShipId() != -1)
-            elif self.mode == "shooting":
-                if ai.closestShipId() == -1:
-                    self.mode = "ready"
-                else:
-                    shoot(ai.closestShipId())
-                    if shoot(ai.closestShipId()) < 3:
-                        ai.fireShot()
-                    
-                
-      
-        except:
-            e = sys.exc_info()
-            print ("ERROR: ", e)
-
-   
-def shoot(id):
-    selfX=ai.selfX()
-    selfY=ai.selfY()
-    currentX=ai.screenEnemyXId(id)
-    currentY=ai.screenEnemyYId(id)
-    enemyVelocity=ai.enemySpeedId(id)
-    enemyTracking=ai.enemyTrackingRadId(id)
-    enemyVelocityX=enemyVelocity*math.cos(enemyTracking)
-    enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
-    bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
-
-    time=timeOfImpact(selfX, selfY, currentX, currentY, enemyVelocityX, enemyVelocityY, bulletVelocity)
-
-    targetX=currentX+enemyVelocityX*time
-    targetY=currentY+enemyVelocityY*time
-    targetAngle=math.atan2(targetY-selfY,targetX-selfX)
-    targetAngle=ai.radToDeg(targetAngle)
-    egenAngle=int(ai.selfHeadingDeg())
-    diffAngle=ai.angleDiff(egenAngle,targetAngle)
-
-    ai.turn(diffAngle)
-    return diffAngle
-
-def timeOfImpact(selfX, selfY, targetX, targetY, targetSpeedX, targetSpeedY, bulletSpeed): #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
-
-    relativeX=targetX-ai.selfX()
-    relativeY=targetY-ai.selfY()
-    a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
-    b=relativeX*targetSpeedX+relativeY*targetSpeedY
-    c=relativeX*relativeX+relativeY*relativeY
-
-    d=b*b+a*c
-    
-    time=0
-
-    if d >= 0:
-        time = ( b + math.sqrt(d) ) /a
-        if time < 0:
-            time = 0
-
-    return time
-	
-def flyTo(targetX,targetY,selfX,selfY): #not used in this one
-        targetAngle=math.atan2(targetY-selfY,targetX-selfX)
-        targetAngle=ai.radToDeg(targetAngle)
-        egenAngle=int(ai.selfHeadingDeg())
-        diffAngle=ai.angleDiff(egenAngle,targetAngle)
-        diffX=selfX-targetX
-        diffY=selfY-targetY
-
-        #print(selfX, selfY, targetX, targetY)
-        ai.turn(diffAngle)
-        if ai.closestShipId() != -1:
-            print("stopping")
-            ai.thrust(0)
-            return
-
-        if math.fabs(ai.selfVelX()) + math.fabs(ai.selfVelY()) < 10:
-            print("thrust")
-            ai.thrust(1)
-        else:
-            ai.thrust(0)
-
-        
- def check_wall (self, dist):
+    def check_wall (self, dist):
 #        print ("CHECKWALL")
         try:
             heading = ai.selfHeadingDeg() # 0-360, 0 in x direction, positive toward y
@@ -204,6 +49,167 @@ def flyTo(targetX,targetY,selfX,selfY): #not used in this one
             print ("ERROR check_wall: ", e)
 
         return False
+
+    def tick(self):
+        try:
+
+            #
+            # If we die then restart the state machine in the state "init"
+            #
+            if not ai.selfAlive():
+                self.count = 0
+                self.mode = "init"
+                return
+
+            self.count += 1
+
+            #
+            # Read the "sensors"
+            #
+
+            heading = ai.selfHeadingDeg() 
+            # 0-360, 0 in x direction, positive toward y
+            ai.setTurnSpeed(64.0)
+            speed = ai.selfSpeed()
+            x = ai.selfX()
+            y = ai.selfY()
+            vx = ai.selfVelX()
+            vy = ai.selfVelY()
+            # Add more sensors readings here if they are needed
+
+            print (self.mode, ai.shotVel(0), ai.shotVelDir(0))
+
+
+            # avoid strange sensor values when starting by waiting
+            # three ticks until we go to ready
+            if self.count == 3:
+                self.mode = "ready"
+            
+            elif self.mode =="ready":
+                if ai.closestShipId() == -1:
+                    self.mode = "moving"
+                elif ai.closestShipId() != -1:
+                    self.mode = "shooting"
+            
+            elif self.mode == "moving":
+                flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
+                avoidAngle = turnAngle(heading)
+                if self.check_wall(200):
+                    self.mode = "turning"
+            
+            elif self.mode == "turning":
+                ai.turn(avoidAngle)
+                if abs (ai.angleDiff (int(heading), int(avoidAngle))) < 2:
+                    self.mode = "waitnowall"
+                    
+                if ai.closestShipId() != -1:
+                    self.mode = "shooting"
+                    
+            # Wait until wanted heading is achieved. Then go to state waitnowall.
+            
+
+            elif self.mode == "waitnowall":
+                ai.thrust(1)
+                if not self.check_wall(200):
+                    self.mode = "moving"
+
+
+            elif self.mode == "shooting":
+                if ai.closestShipId() == -1:
+                    self.mode = "ready"
+                else:
+                    #degreeDiff=
+                    shoot(ai.closestShipId())
+                    #if degreeDiff < 3:
+                    ai.fireShot()
+                    
+                
+      
+        except:
+            e = sys.exc_info()
+            print ("ERROR: ", e)
+
+   
+def shoot(id):
+    selfX=ai.selfX()
+    selfY=ai.selfY()
+    selfVelocity=ai.selfSpeed()
+    selfTracking=ai.selfTrackingRad()
+    if math.isnan(selfTracking):
+        selfTracking=0
+    selfVelocityX=selfVelocity*math.cos(selfTracking)
+    selfVelocityY=selfVelocity*math.sin(selfTracking)
+
+
+
+    enemyX=ai.screenEnemyXId(id)
+    enemyY=ai.screenEnemyYId(id)
+    enemyVelocity=ai.enemySpeedId(id)
+    enemyTracking=ai.enemyTrackingRadId(id)
+    if math.isnan(enemyTracking):
+        enemyTracking=0
+    enemyVelocityX=enemyVelocity*math.cos(enemyTracking)
+    enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
+    bulletVelocity=10 #emptybordernofriction.xp
+
+    relativeX=enemyX-selfX
+    relativeY=enemyY-selfY
+    relativeVelocityX=enemyVelocityX-selfVelocityX
+    relativeVelocityY=enemyVelocityY-selfVelocityY
+
+
+    time=timeOfImpact(relativeX, relativeY, relativeVelocityX, relativeVelocityY, bulletVelocity)
+
+    targetX=enemyX+enemyVelocityX*time
+    targetY=enemyY+enemyVelocityY*time
+    targetAngle=math.atan2(targetY-selfY,targetX-selfX)
+    targetAngle=ai.radToDeg(targetAngle)
+    egenAngle=int(ai.selfHeadingDeg())
+    diffAngle=ai.angleDiff(egenAngle,targetAngle)
+
+    ai.turn(diffAngle)
+    return diffAngle
+
+def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+
+    a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
+    b=relativeX*targetSpeedX+relativeY*targetSpeedY
+    c=relativeX*relativeX+relativeY*relativeY
+
+    d=b*b+a*c
+    
+    time=0
+
+    if d >= 0:
+        time = ( b + math.sqrt(d) ) /a
+        if time < 0:
+            time = 0
+
+    return time
+	
+def flyTo(targetX,targetY,selfX,selfY):
+    targetAngle=math.atan2(targetY-selfY,targetX-selfX)
+    targetAngle=ai.radToDeg(targetAngle)
+    egenAngle=int(ai.selfHeadingDeg())
+    diffAngle=ai.angleDiff(egenAngle,targetAngle)
+    diffX=selfX-targetX
+    diffY=selfY-targetY
+
+    ai.turn(diffAngle)
+    if ai.closestShipId() != -1:
+        print("stopping")
+        ai.thrust(0)
+        return
+
+    if ai.selfSpeed() < 2:
+        ai.thrust(1)
+    else:
+        ai.thrust(0)
+
+def turnAngle(heading):
+    heading += 180
+    heading %= 360
+    return(heading)
 
  
 #

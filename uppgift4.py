@@ -49,7 +49,6 @@ class myai:
 
             heading = ai.selfHeadingDeg() 
             # 0-360, 0 in x direction, positive toward y
-
             speed = ai.selfSpeed()
             x = ai.selfX()
             y = ai.selfY()
@@ -68,15 +67,18 @@ class myai:
                 self.mode = "Ready"
             
             elif self.mode == "Ready":
-                if danger() == -5 or danger == 5:
+                if danger() != False:
                     self.mode = "Dodge"
                 else: 
                     ai.thrust(0)
             
             elif self.mode == "Dodge":
-                if selfVel < 3:
-                    ai.thrust(1)
                 dodge(danger())
+                if speed < 3:
+                    ai.thrust(1)
+                elif danger() == False:
+                    self.mode = "Ready"
+                
                 
 #Below if puts the bot back in ready mode if danger subsides.                                                          .
                 if danger() == False:
@@ -152,7 +154,7 @@ def danger():
                 selfTimer = time(intersectCoords, selfStraightLine)
                 shotTimer = time(intersectCoords, shotStraightLine)
      
-                if selfTimer - shotTimer > 5 or selfTimer - shotTimer < -5: #Tentative values, to be adjusted as needed.
+                if selfTimer - shotTimer > 15 or selfTimer - shotTimer < -15: #Tentative values, to be adjusted as needed.
                     pass
                
                 else:
@@ -192,7 +194,7 @@ def danger():
 
 
         elif ai.shotAlert(i) == -1:
-            break
+            return(False)
 
 
         
