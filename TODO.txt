@@ -2,35 +2,40 @@ Add stuff you think needs to be done here, as well as make a comment if you're w
 
 
 Introdoctury assignments
-    1,2,3:      (approved)
+    1,2,3,5:      (approved)
 
-    4:          (approved)
+    4:          (approved) #fly to avoid being shot at
     I have completely rewritten the entire uppgift4 largely basing it on uppgift 6, thusly it is no longer, in current form, working as well as I would like, though it is better than the old version . I will have it working as intended shortly. //magnus
 
-    6:          (approved)
-        *Aiming can still be improved.
+    6:          (approved) #shoot down moving targets
+        *Aiming can still be improved. Very hard to hit fast targets.
 
-    7:          (approved)
+    7:          (approved) #hunt down and shoot moving targets
         *Aiming can still be improved
 
-    8: 
+    8: #Hunt and shoot moving enemy, while avoidin walls
         *Near done.
 
-    9:
+    9: #Move, shoot, dodge. Moving enemy
         *Do it
 
-    10:
+    10: #follow enemy
         *Do it
             *aim at target
             *Try to match his speed
             *Avoid getting too close or too far away
 
-    11:
+    11: #Fight!
         *Not necessary
         *Basicall just copy-paste 9 and run two instances versus eachother
 
 
-Real assignments:
+Ultimate goal: Move, shoot, dodge and avoid walls.
+Also include strategies, and find out whats the best way  to approach enemies and stuff. Prioritize when there are multiple enemies available.
+
+Map?: RateOfFire, shotspeed, turnspeed, cool map layout, friction, ship weight.
+
+Real assignments: //We've decided not to do these for the time being, we will concentrate on getting one superbot
     1: Recommended to do
     2: Recommended to do
     3: Do it if we have time (Wouldn't hurt to give the man pleasant news for a change)
