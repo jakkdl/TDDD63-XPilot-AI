@@ -70,7 +70,7 @@ class myai:
                 if danger() != False:
                     self.mode = "Dodge"
                 else: 
-                    ai.thrust(0)
+                    pass
             
             elif self.mode == "Dodge":
                 dodge(danger())
@@ -88,6 +88,18 @@ class myai:
         except:
             e = sys.exc_info()
             print ("ERROR: ", e)
+
+#For a ship that is unmoving. Will the trajectory of the shot cross the location of the ship? 
+
+def interPointLine(x, y, returnList):
+    cross = returnList[0]*x+returnList[1]
+    
+    if cross == y:
+        return(True)
+    elif cross - y < 10 and cross - y > -10:
+        return(True)
+    else:
+        return(False)
 
 def dodge(degrees):
     ai.turn(degrees)
@@ -120,6 +132,13 @@ def time(intersectCoords, returnList):
     else: 
         intersectTime = intersectY/returnList[0] - returnList[1]
         return(intersectTime)
+
+#Same as above, roughly, except for an unmoving ship.
+
+def timeStill(x, y, returnList):
+    time = y/(returnList[0]*x + returnList[1])
+    return(time)
+
 
 #Calculates the danger of every shot in the immediate viscinity of the ship, using above functions. Returns a 5 degree turn adjustment, positive or negative depending on which small evasion is needed. If this is insufficient the next tick will catch it and force another 5 degree adjustment.
 def danger():
@@ -169,28 +188,14 @@ def danger():
                             return(5)
 
             elif ai.shotDist(i) < 200 and selfVel == 0:
-                intersectCoords = intersection([selfX, selfY], straightLine(shotX, shotY, shotVelX, shotVelY))
-                selfStraightLine = [1, selfY]
-                shotStraightLine = straightLine(shotX, shotY, shotVelX, shotVelY)
-                selfTimer = time(intersectCoords, selfStraightLine)
-                shotTimer = time(intersectCoords, shotStraightLine)
+                 
+              intersectCoords = interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY))
+              if intersectCoords == True:
+                  ai.thrust(1)
+              else:
+                  pass
      
-                if selfTimer - shotTimer > 5 or selfTimer - shotTimer < -5: #Tentative values, to be adjusted as needed.
-                    pass
-               
-                else:
-                    if selfX < shotX:
-                        return(5) 
-                    elif selfX > shotX:
-                        return(-5)
-                    else:
-                        if selfY < shotY: 
-                            return(-5)
-                        elif selfY > shotY:
-                            return(5)
-
-
-
+            
 
 
         elif ai.shotAlert(i) == -1:
