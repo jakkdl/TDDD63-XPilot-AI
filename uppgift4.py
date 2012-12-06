@@ -74,7 +74,7 @@ class myai:
             
             elif self.mode == "Dodge":
                 dodge(danger())
-                if speed < 3:
+                if speed < 2:
                     ai.thrust(1)
                 elif danger() == False:
                     self.mode = "Ready"
@@ -136,7 +136,7 @@ def time(intersectCoords, returnList):
 #Same as above, roughly, except for an unmoving ship.
 
 def timeStill(x, y, returnList):
-    time = y/(returnList[0]*x + returnList[1])
+    time = (y-returnList[1]) / (returnList[0])
     return(time)
 
 
@@ -160,10 +160,10 @@ def danger():
             if ai.shotDist(i) > 200:
                 return(False)
 
-            elif selfVel > 0 and intersection(straightLine(selfX, selfY, selfVelX, selfVelY), straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+            elif selfVel == 0 and intersection([selfX, selfY], straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
                 return(False)
             
-            elif selfVel == 0 and intersection([selfX, selfY], straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+            elif selfVel == 0 and interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
                 return(False)
 
             elif ai.shotDist(i) < 200 and selfVel > 0:
@@ -192,6 +192,7 @@ def danger():
               intersectCoords = interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY))
               if intersectCoords == True:
                   ai.thrust(1)
+                  return(5)
               else:
                   pass
      
@@ -200,6 +201,7 @@ def danger():
 
         elif ai.shotAlert(i) == -1:
             return(False)
+            break
 
 
         
