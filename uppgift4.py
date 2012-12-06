@@ -89,6 +89,8 @@ class myai:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
+
+
 def dodge(degrees):
     ai.turn(degrees)
 
@@ -134,7 +136,9 @@ def danger():
     selfVelX = ai.selfVelX()
     selfVelY = ai.selfVelY()
     for i in range(99):
-        if ai.shotAlert(i) != -1:
+        if ai.shotAlert(i) == -1:
+            return False
+        else:
             shotX = ai.shotX(i)
             shotY = ai.shotY(i)
             shotTrack = ai.shotVelDir(i)
@@ -187,10 +191,9 @@ def danger():
                     else:
                         pass
 
-
-        elif ai.shotAlert(i) == -1:
-            return(False)
         break
+
+
         
 
         
@@ -222,8 +225,8 @@ name = "Nemesis Divina"
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,["-name", name, 
-                  "-join", 
-                  "-fuelMeter", "yes", 
-                  "-showHUD", "no",
-                  "-port", str(port)])
+ai.start(AI_loop,[])#"-name", name, 
+                  #"-join", 
+                  #"-fuelMeter", "yes", 
+                  #"-showHUD", "no",
+                  #"-port", str(port)])
