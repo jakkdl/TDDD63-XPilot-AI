@@ -89,6 +89,9 @@ class myai:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
+def dodge(degrees):
+    ai.turn(degrees)
+
 #For a ship that is unmoving. Will the trajectory of the shot cross the location of the ship? 
 
 def interPointLine(x, y, returnList):
