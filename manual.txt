@@ -1,0 +1,11 @@
+#All commands given serve as examples, and may vary depending on system
+
+Install xpilot and xpilot-ai, or xpilot-ng and xpilot-ng-ai.
+
+Start a server, or find a server made my somebody else. The AI only works on a few maps, namely [placeholder], all of which resides in the maps/ directory.
+
+$ xpilot-ng-server -map /path/to/maps/map.xp -noQuit +reportMeta
+
+Finally, start the program by launching it with python 3.
+
+$ python AI.py
