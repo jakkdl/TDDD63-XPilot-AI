@@ -4,12 +4,13 @@ Add stuff you think needs to be done here, as well as make a comment if you're w
 Write a User Manual (this is supposed to be written incrementally during the project, so we should start immediately)
 
 Write Technical overview (this is supposed to be written incrementally during the project, so we should start immediately)
+Magnus started
 
-Introdoctury assignments
+Introductory assignments
     1,2,3,5:      (approved)
 
     4:          (approved) #fly to avoid being shot at
-    I have completely rewritten the entire uppgift4 largely basing it on uppgift 6, thusly it is no longer, in current form, working as well as I would like, though it is better than the old version . I will have it working as intended shortly. //magnus
+        Almost works as far as i can tell. Magnus finish it up
 
     6:          (approved) #shoot down moving targets
         *Aiming can still be improved. Very hard to hit fast targets.
@@ -18,7 +19,7 @@ Introdoctury assignments
         *Aiming can still be improved
 
     8: #Hunt and shoot moving enemy, while avoidin walls
-        *Near done.
+        *Near done. #Magnus finish dis plis :D
 
     9: #Move, shoot, dodge. Moving enemy
         *Do it
@@ -29,21 +30,9 @@ Introdoctury assignments
             *Try to match his speed
             *Avoid getting too close or too far away
 
-    11: #Fight!
-        *Not necessary
-        *Basicall just copy-paste 9 and run two instances versus eachother
 
 
 Ultimate goal: Move, shoot, dodge and avoid walls.
 Also include strategies, and find out whats the best way  to approach enemies and stuff. Prioritize when there are multiple enemies available.
 
 Map?: RateOfFire, shotspeed, turnspeed, cool map layout, friction, ship weight.
-
-Real assignments: //We've decided not to do these for the time being, we will concentrate on getting one superbot
-    1: Recommended to do
-    2: Recommended to do
-    3: Do it if we have time (Wouldn't hurt to give the man pleasant news for a change)
-    4: -"-
-    5: Recommended to do
-
-ROCK
