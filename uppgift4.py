@@ -96,13 +96,10 @@ def interPointLine(x, y, returnList):
     
     if cross == y:
         return(True)
-    elif cross - y < 10 and cross - y > -10:
+    elif (cross - y) < 10 and (cross - y) > -10:
         return(True)
     else:
         return(False)
-
-def dodge(degrees):
-    ai.turn(degrees)
 
 #Calculates the straight line equation, and returns the k and m values.
 def straightLine(x, y, velX, velY):
@@ -111,33 +108,18 @@ def straightLine(x, y, velX, velY):
     returnList = [valueK, valueM]
     return(returnList)
 
+
 #Checks whether, and where, two straight lines will intersect. Returns a value for (x,y) where the lines cross.
 def intersection(selfLine, shotLine):
-    valueX = (selfLine[1]-shotLine[1])/(selfLine[0]-shotLine[0])
+    valueX = (selfLine[1]-shotLine[1])/(shotLine[0]-selfLine[0])
     valueY = selfLine[0]*valueX+selfLine[1]
     returnList = [valueX, valueY]
     if not selfLine or not shotLine:
         return("Error, wrong input to intersection function")
-    elif selfLine[0] == shotLine[0]:
+    elif selfLine == shotLine:
         return(False)
     else: 
         return(returnList)
-
-#Calculates the amount of time until the lines intercept. The straight line equations are calculated based on the directional velocity of the objects, thusly the resulting x value can be used as a measurement of time to check whether they will reach the intercept point at the same time, otherwise we are still safe on current course.
-def time(intersectCoords, returnList):
-    intersectY = intersectCoords[1]
-    intersectTime = 0
-    if not returnList:
-        return("Error, incorrect input to time function")
-    else: 
-        intersectTime = intersectY/returnList[0] - returnList[1]
-        return(intersectTime)
-
-#Same as above, roughly, except for an unmoving ship.
-
-def timeStill(x, y, returnList):
-    time = (y-returnList[1]) / (returnList[0])
-    return(time)
 
 
 #Calculates the danger of every shot in the immediate viscinity of the ship, using above functions. Returns a 5 degree turn adjustment, positive or negative depending on which small evasion is needed. If this is insufficient the next tick will catch it and force another 5 degree adjustment.
@@ -156,53 +138,57 @@ def danger():
             shotVel = 10 + ai.enemySpeedId(enId) # The 10 may vary depending on map, adjust accordingly.
             shotVelX = shotVel*math.cos(shotTrack)
             shotVelY = shotVel*math.sin(shotTrack)
- 
-            if ai.shotDist(i) > 200:
-                return(False)
-
-            elif selfVel == 0 and intersection([selfX, selfY], straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
-                return(False)
             
-            elif selfVel == 0 and interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
-                return(False)
+            if selfVel > 0 and shotVelX == 0:
+                shotVelX += 0.01
+            
+            elif selfVel > 0 and shotVelY == 0:
+                shotVelY += 0.01
+                
+            elif selfVel > 0 and selfVelX == 0:
+                selfVelX += 0.01
+            
+            elif selfVel > 0 and selfVelY == 0:
+                selfVelY += 0.01
+                
+            else:
 
-            elif ai.shotDist(i) < 200 and selfVel > 0:
-                intersectCoords = intersection(straightLine(selfX, selfY, selfVelX, selfVelY), straightLine(shotX, shotY, shotVelX, shotVelY))
-                selfStraightLine = straightLine(selfX, selfY, selfVelX, selfVelY)
-                shotStraightLine = straightLine(shotX, shotY, shotVelX, shotVelY)
-                selfTimer = time(intersectCoords, selfStraightLine)
-                shotTimer = time(intersectCoords, shotStraightLine)
-     
-                if selfTimer - shotTimer > 15 or selfTimer - shotTimer < -15: #Tentative values, to be adjusted as needed.
-                    pass
-               
-                else:
+                if ai.shotDist(i) > 200:
+                    return(False)
+
+                elif selfVel == 0 and interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+                    return(False)
+            
+           # elif selfVel == 0 and interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY)) == True:
+                #return(5)
+
+                elif ai.shotDist(i) < 200 and selfVel > 0:
+                    intersectCoords = intersection(straightLine(selfX, selfY, selfVelX, selfVelY), straightLine(shotX, shotY, shotVelX, shotVelY))
+                    selfStraightLine = straightLine(selfX, selfY, selfVelX, selfVelY)
+                    shotStraightLine = straightLine(shotX, shotY, shotVelX, shotVelY)
                     if selfX < shotX:
-                        return(5) 
+                        return(-5) 
                     elif selfX > shotX:
-                        return(-5)
+                        return(5)
                     else:
                         if selfY < shotY: 
                             return(-5)
-                        elif selfY > shotY:
+                        else:
                             return(5)
-
-            elif ai.shotDist(i) < 200 and selfVel == 0:
+                    
+                elif ai.shotDist(i) < 200 and selfVel == 0:
                  
-              intersectCoords = interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY))
-              if intersectCoords == True:
-                  ai.thrust(1)
-                  return(5)
-              else:
-                  pass
-     
-            
+                    intersectCoords = interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY))
+                    if intersectCoords == True:
+                        return(5)
+                    else:
+                        pass
 
 
         elif ai.shotAlert(i) == -1:
             return(False)
-            break
-
+        break
+        
 
         
         
