@@ -1,11 +1,52 @@
 Add stuff you think needs to be done here, as well as make a comment if you're working on it. Also comment if you encounter problems or similar.
 
 
-Write a User Manual (this is supposed to be written incrementally during the project, so we should start immediately)
+Write a User Manual: Done!
+    Probably not perfect so feel free to improve it /hatten
 
 Write Technical overview (this is supposed to be written incrementally during the project, so we should start immediately)
-Magnus started
+    Magnus started
 
+
+Ultimate goal: Move, shoot, dodge and avoid walls.
+finalAI.py
+    Move
+        Done! Pathfinding would be sexy though.
+    Shoot
+        He aims like crap, it works, but should be improved
+    Dodge
+        Not implemented, magnus working on finishing the fourth
+    avoid walls
+        It rarely crashes into walls, but it does sometimes, fix that.
+        It's pretty dumb l0l (improve in general)
+        Would be sexy to check for walls all around us, or at least heading +/- 10 degrees.
+
+    Additional features!
+        Strategies?
+        Make it handle multiple enemies
+
+
+
+Map: final.xp
+    RateOfFire
+        Heavily changed.
+    Shotspeed
+        Upped to 21, maybe cool to heighten it further.
+    Turnspeed
+        untouched.
+    Map layout
+        Decent, Feel free to improve it
+    Friction
+        0.05, seem to work pretty well
+    ship weight
+        untouched
+
+    More stuff?
+
+
+
+
+I don't think the assistant care about these anymore, just make sure to finish the fourth, as that's needed for finalAI.py
 Introductory assignments
     1,2,3,5:      (approved)
 
@@ -29,10 +70,3 @@ Introductory assignments
             *aim at target
             *Try to match his speed
             *Avoid getting too close or too far away
-
-
-
-Ultimate goal: Move, shoot, dodge and avoid walls.
-Also include strategies, and find out whats the best way  to approach enemies and stuff. Prioritize when there are multiple enemies available.
-
-Map?: RateOfFire, shotspeed, turnspeed, cool map layout, friction, ship weight.
