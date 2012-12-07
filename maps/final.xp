@@ -42,7 +42,7 @@ minrobots : 0
 maxrobots : 0
 robotrealname : robot
 robothostname : xpilot.org
-shotswallbounce : yes
+shotswallbounce : no
 ballswallbounce : yes
 mineswallbounce : yes
 itemswallbounce : yes
@@ -281,27 +281,27 @@ mapData: \multiline: EndOfMapdata
                                 
                        3                        
                                 
-                            4          2        
-        1                                       
-                                
-                                
-                                           4    
-                               x
-                              xxx
-                             xxxxx              
-                            xxxxxxx             
-     3                     xxxxxxxxx            2
-                          xxxxxxxxxxx           
-                           xxxxxxxxx            
-                            xxxxxxx             
-                             xxxxx              
-        1                     xxx
-                               x           2    
-                                
-                                
-                                
-              3                 
-                                          4     
+                            4  x       2        
+        1                     xxx               
+                             xxxxx
+                            xxxxxxx
+                           xxxxxxxxx       4    
+                          xxxxxxxxxxx
+                         xxxxxxxxxxxxx
+                        xxxxxxxxxxxxxxx         
+                       xxxxxxxxxxxxxxxxx        
+     3                xxxxxxxxxxxxxxxxxxx       2
+                     xxxxxxxxxxxxxxxxxxxxx      
+                      xxxxxxxxxxxxxxxxxxx       
+                       xxxxxxxxxxxxxxxxx        
+                        xxxxxxxxxxxxxxx         
+        1                xxxxxxxxxxxxx
+                          xxxxxxxxxxx      2    
+                           xxxxxxxxx
+                            xxxxxxx
+                             xxxxx
+              3               xxx
+                               x          4     
                                                
                                 
                         1               
