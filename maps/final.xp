@@ -288,12 +288,12 @@ mapData: \multiline: EndOfMapdata
                            xxxxxxxxx       4    
                           xxxxxxxxxxx
                          xxxxxxxxxxxxx
-                        xxxxxxxxxxxxxxx         
-                       xxxxxxxxxxxxxxxxx        
-     3                xxxxxxxxxxxxxxxxxxx       2
-                     xxxxxxxxxxxxxxxxxxxxx      
-                      xxxxxxxxxxxxxxxxxxx       
-                       xxxxxxxxxxxxxxxxx        
+                        xxxxx     xxxxx         
+                       xxxxxx xxx xxxxxx        
+     3                xxxxxxx xxx xxxxxxx       2
+                     xxxxxxxx xxx xxxxxxxx      
+                      xxxxxxx xxx xxxxxxx       
+                       xxx           xxx        
                         xxxxxxxxxxxxxxx         
         1                xxxxxxxxxxxxx
                           xxxxxxxxxxx      2    
