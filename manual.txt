@@ -1,11 +1,93 @@
-#All commands given serve as examples, and may vary depending on system
+All commands and flags given serve as examples, and may or may not work depending on system and versions.
 
-Install xpilot and xpilot-ai, or xpilot-ng and xpilot-ng-ai.
 
-Start a server, or find a server made my somebody else. The AI only works on a few maps, namely [placeholder], all of which resides in the maps/ directory.
 
-$ xpilot-ng-server -map /path/to/maps/map.xp -noQuit +reportMeta
 
-Finally, start the program by launching it with python 3.
 
+Download and install xpilot from http://sourceforge.net/projects/xpilotgame
+Download and install xpilot-ai from http://xpilot-ai.org/
+
+(if you fail to install any of these, look further down for instructions regarding xpilot-ng and xpilot-ng-ai)
+
+Start a server with
+$ xpilots
+
+Useful flags are
+    -map /path/to/map.xp Load another map than the default
+    -noQuit             The server doesn't quit when it gets empty
+    -maxIdleTime 0      The server doesn't kick inactive players, useful for testing.
+    +reportToMetaServer This will avoid having other players and AI's from around the world join the game.
+    -port <number>      Change default port to avoid conflicting with other servers on the same network
+    -maxClientsPerIp <nr>   To increase the amount of clients that can connect from the same IP (default 2)
+further options can be found with
+$ man xpilots
+
+
+The map(s) supported by the AI is [placeholder], which can be found in the maps/ folder.
+
+Finally start the bot with python 3
 $ python AI.py
+or
+$ python3 AI.py
+if python3 is not the default.
+
+
+If you want to start a human player
+$ xpilot
+
+Useful flags are
+    -name "name"    To avoid duplicate names, in which case the server won't let you in.
+Further options can be found with
+$ man xpilot-ng-x11
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+If you fail to get xpilot and/or xpilot-ng-ai to work, you can try with xpilot-ng and xpilot-ng-ai
+
+Download and install xpilot-ng from http://sourceforge.net/projects/xpilot/files/xpilot_ng/
+Download and install xpilot-ng-ai from http://xpilot-ai.org/
+
+Using xpilot-ng and xpilot-ng-ai
+
+Start a server with
+$ xpilot-ng-server
+
+Useful flags are
+    -map /path/to/map.xp Load another map than the default
+    -noQuit             The server doesn't quit when it gets empty
+    -maxIdleTime 0      The server doesn't kick inactive players, useful for testing.
+    +reportToMetaServer This will avoid having other players and AI's from around the world join the game.
+    -maxClientsPerIp <nr>   To increase the amount of clients that can connect from the same IP (default 2)
+further options can be found with
+$ man xpilot-ng-server
+
+
+The map(s) supported by the AI is [placeholder], which can be found in the maps/ folder.
+
+Finally start the bot with python 3
+$ python AI.py
+or
+$ python3 AI.py
+if python3 is not the default.
+
+
+If you want to start a human player
+$ xpilot-ng-x11
+
+Useful flags are
+    -name "name"    To avoid duplicate names, in which case the server won't let you in.
+Further options can be found with
+$ man xpilot-ng-x11

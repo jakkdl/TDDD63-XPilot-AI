@@ -56,7 +56,7 @@ class myai:
             vy = ai.selfVelY()
             selfDirection = ai.selfTrackingDeg()
             # Add more sensors readings here if they are needed
-            
+            dodgeAngle = danger()
             ai.setTurnSpeed(64.0)
 
             print(self.mode, x, ai.shotX(0), "-", y, ai.shotY(0), "-")
@@ -73,7 +73,7 @@ class myai:
                     pass
             
             elif self.mode == "Dodge":
-                dodge(danger())
+                ai.turn(dodgeAngle)
                 if speed < 2:
                     ai.thrust(1)
                 elif danger() == False:
@@ -89,10 +89,6 @@ class myai:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
-
-
-def dodge(degrees):
-    ai.turn(degrees)
 
 #For a ship that is unmoving. Will the trajectory of the shot cross the location of the ship? 
 
@@ -191,7 +187,7 @@ def danger():
                     else:
                         pass
 
-        break
+                break
 
 
         
@@ -219,14 +215,14 @@ def AI_loop():
 (options, args) = parser.parse_args()
 
 port = 15345 + options.group
-name = "Nemesis Divina"
+name = "Voldemort"
 
 #
 # Start the main loop. Callback are done to AI_loop.
 #
 
-ai.start(AI_loop,[])#"-name", name, 
-                  #"-join", 
+ai.start(AI_loop,["-name", name, 
+                  "-join", 
                   #"-fuelMeter", "yes", 
                   #"-showHUD", "no",
-                  #"-port", str(port)])
+                  "-port", str(port)])

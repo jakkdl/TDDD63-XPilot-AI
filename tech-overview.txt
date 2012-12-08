@@ -8,7 +8,7 @@ The dodge function has been rewritten dozens of times at this point. At this poi
 
 It loops through every shot ID from 0 to 99 within a radius of 200 units from the ship and tests the danger of all shots that are hostile (have a danger rating above -1). It calculates a linear equation for the shot trajectory and compares it with the current linear equation of the ship. If the two lines cross and, the shot and the ship are estimated to cross it at approximately the same time, it kicks in dodge mode. Dodge mode makes it change course slightly, and test for continued danger. If it's still in danger of getting hit it will keep changing the course until it determines that the danger is over, at which point it goes back to ready mode to determine what the best course of action would be. 
 
-
+The wall finder and wall evasion is largely a modification and extension of the wall finder we got in one of the examples. Essentially it scans straight ahead for walls, and if it finds one it turns 180 degress, and thrusts to avoid hitting, then goes back into ready mode and on to whatever it was doing prior to the wall becoming an obstacle.
 
 
 

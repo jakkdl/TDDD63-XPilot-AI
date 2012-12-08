@@ -4,7 +4,6 @@ import sys
 import math
 import random
 
-
 from optparse import OptionParser
 
 parser = OptionParser()
@@ -14,34 +13,6 @@ parser.add_option ("-g", "--group", action="store", type="int",
                    help="The group number. Used to avoid port collisions when" 
                    " connecting to the server.")
 
-#
-# state machine
-#
-# start -> fly -> turn -> waitnowall --
-#           |                         |
-#           ---------------------------
-#
-# We have here four states. The intuitive meaning of them are as follows:
-#
-# start      - This is the state the state machine is in when starting the program.
-#              It goes from this mode to fly after the tick function have been called
-#              three times. This is to avoid getting strange sensor values when starting.
-#
-# fly        - In this state the wanted minimal speed is set to 2. We will leave 
-#              this state for the turn state when we are near a wall.
-#
-# turn       - We are travelling toward a wall so we turn to hit the wall with the
-#              backside of the ship.
-#
-# waitnowall - waitnowall waits for the spaceship to bounce and change velocity 
-#              direction. That means that it waits for no walls in the velocity 
-#              direction.
-#
-# Note that an effect of how the control is done is that you cannot slow
-# down. The wanted_minimal_speed is a minimal speed. If that is set to
-# 0 that will not do anything. The control will only enable thrust to
-# increase the speed so it is above the wanted minimal speed.
-#
 
 class myai:
     """Simple wall avoidance"""
@@ -54,33 +25,9 @@ class myai:
         self.wanted_minimal_speed = 0
         self.wanted_heading = 90
         self.mode = "init"        # used to store the current state of the state machine
+        random.seed()
 
 
-    #
-    # Returns true if there is a wall nearer than dist in the direction the
-    # ship is moving (not the direction it is pointing!). Otherwise returns false.
-    def check_wall (self, dist):
-#        print ("CHECKWALL")
-        try:
-            heading = ai.selfHeadingDeg() # 0-360, 0 in x direction, positive toward y
-            vx = ai.selfVelX()
-            vy = ai.selfVelY()
-            direction = heading
-            if vx != 0 or vy != 0:
-                direction = math.degrees (math.atan2 (vy, vx))
-
-                distance_to_wall = ai.wallFeeler (dist, int(direction), 1, 1)  
-                # ai.wallFeller return dist if there is no wall in the direction
-                # and nearer than dist. If there is a wall nearer than dist it
-                # returns the actual distance to the wall.
-
-                return dist != distance_to_wall
-
-        except:
-            e = sys.exc_info()
-            print ("ERROR check_wall: ", e)
-
-        return False
 
 
     def tick(self):
@@ -99,81 +46,94 @@ class myai:
 
             self.count += 1
 
-            print(self.mode)
 
             #
             # Read the ships "sensors".
             #
-            ai.setTurnSpeed(64.0)
+            ai.setTurnSpeed(30.0)
             x = ai.selfX()
             y = ai.selfY()
             vx = ai.selfVelX()
             vy = ai.selfVelY()
             speed = ai.selfSpeed()
             selfDirection = ai.selfTrackingDeg()
+            heading = ai.selfHeadingDeg()
             
+            print(self.mode, self.wanted_heading)
+
             # The coordinate for the ships position in the radar coordinate system, 
             # (0,0) is bottom left.
             # The radar is shown in the small black window in the top left corner
             # when you start the client.
 
             # read heading and compute the direction we are moving in if any
-            heading = ai.selfHeadingDeg() # 0-360, 0 in x direction, positive toward y
-            direction = heading
-            if vx != 0 or vy != 0:
-                direction = math.degrees (math.atan2 (vy, vx))
+            #direction = heading
+            #if vx != 0 or vy != 0:
+                #direction = math.degrees (math.atan2 (vy, vx))
         
             #
             # State machine code, do different things including state 
             # transitions depending on the current state, sensor values and
             # other kind of values.
             #
-
+            
+            # At all times we want to check if we are crashing into anything, unless we are already avoiding it
+            if check_wall(300) and self.mode != "turning":
+                self.wanted_heading = int(ai.selfHeadingDeg()) # 0-360, 0 in x direction, positive toward y
+                self.wanted_heading += 90
+                self.wanted_heading %= 360
+                self.mode = "turning"
+            
             # avoid strange sensor values when starting by waiting
             # three ticks until we go to fly
             if self.count == 3:
                 self.mode = "ready"
 
             elif self.mode == "ready":
-                 if ai.closestShipId() == -1:
-                    self.mode = "moving"
-                 elif ai.closestShipId() != -1:
-                    self.mode = "shooting"
+                if ai.closestShipId() == -1:
+                   self.mode = "moving"
+                else:
+                   self.mode = "shooting"
             
             elif self.mode == "moving":
-                self.wanted_minimal_speed = 2
-                self.wanted_heading = flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
-                # check if we are near walls if flying
-                if self.check_wall(200):
-                    self.wanted_heading += 180
-                    self.wanted_heading %= 360
-                    self.mode = "turning"
-                    self.wanted_minimal_speed = 0
-                elif ai.closestShipId() != -1 and not self.check_wall(200):
+                if speed < 10:
+                    ai.thrust(1)
+                else:
+                    ai.thrust(0)
+                turnThisWay=flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
+                ai.turn(turnThisWay)
+                if ai.closestShipId() != -1:
                     self.mode = "shooting"
 
             #
             # Wait until wanted heading is achieved. Then go to state waitnowall.
             #
             elif self.mode == "turning":
-                if abs (ai.angleDiff (int(heading), int(self.wanted_heading))) < 2:
+                ai.turnToDeg(self.wanted_heading)
+                #if not check_wall(300):
+                    #self.mode = "ready"
+                print(int(heading), int(self.wanted_heading))
+                if abs(ai.angleDiff (int(heading), int(self.wanted_heading))) < 20:
+                    self.count = 0
                     self.mode = "waitnowall"
-
 
             #
             # Wait until we have "bounced" away from the wall.
             #
             elif self.mode == "waitnowall":
-                
-                if not self.check_wall(200):
+                if not check_wall(300) and self.count > 10:
                     self.mode = "ready"
+                
+                ai.thrust(1)
 
             elif self.mode == "shooting":
+                ai.thrust(0)
                 if ai.closestShipId() == -1:
                     self.mode = "ready"
                 else:
                     #degreeDiff=
-                    shoot(ai.closestShipId())
+                    self.wanted_heading=shoot(ai.closestShipId())
+                    ai.turnToDeg(shoot(ai.closestShipId()))
                     #if degreeDiff < 3:
                     ai.fireShot()
             #
@@ -187,17 +147,7 @@ class myai:
             #
 
             # Turn to the wanted heading
-            ai.turnToDeg (self.wanted_heading)
 
-            # If the actual speed is less then the wanted mininal speed
-            # then enable thruest. Otherwis disable thrust.
-            if self.mode == "waitnowall":
-                ai.thrust(1)
-            else: 
-                if speed < self.wanted_minimal_speed:
-                    ai.thrust (1)
-                else:
-                    ai.thrust (0)
                         
 
 
@@ -225,7 +175,7 @@ def shoot(id):
         enemyTracking=0
     enemyVelocityX=enemyVelocity*math.cos(enemyTracking)
     enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
-    bulletVelocity=10 #emptybordernofriction.xp Assumes that we stand still
+    bulletVelocity=21 #final.xp
 
     relativeX=enemyX-selfX
     relativeY=enemyY-selfY
@@ -239,13 +189,13 @@ def shoot(id):
     targetY=enemyY+enemyVelocityY*time
     targetAngle=math.atan2(targetY-selfY,targetX-selfX)
     targetAngle=ai.radToDeg(targetAngle)
-    egenAngle=int(ai.selfHeadingDeg())
-    diffAngle=ai.angleDiff(egenAngle,targetAngle)
 
-    ai.turn(diffAngle)
-    return diffAngle
 
-def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #copy-pasted straight from internet: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+
+
+    return targetAngle+random.randint(-10,10)
+
+def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 
     a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
     b=relativeX*targetSpeedX+relativeY*targetSpeedY
@@ -261,19 +211,42 @@ def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
             time = 0
 
     return time
+	
+def flyTo(targetX,targetY,selfX,selfY):
+    targetAngle=math.atan2(targetY-selfY,targetX-selfX)
+    targetAngle=ai.radToDeg(targetAngle)
+    egenAngle=int(ai.selfHeadingDeg())
+    diffAngle=ai.angleDiff(egenAngle,targetAngle)
+    diffX=selfX-targetX
+    diffY=selfY-targetY
+
+
+    return diffAngle
         
-def flyTo(targetX,targetY,selfX,selfY): #not used in this one
-        targetAngle=math.atan2(targetY-selfY,targetX-selfX)
-        targetAngle=ai.radToDeg(targetAngle)
-        egenAngle=int(ai.selfHeadingDeg())
-        diffAngle=ai.angleDiff(egenAngle,targetAngle)
-        diffX=selfX-targetX
-        diffY=selfY-targetY
-
-        return(diffAngle)
-        
 
 
+#
+# Returns true if there is a wall nearer than dist in the direction the
+# ship is moving (not the direction it is pointing!). Otherwise returns false.
+def check_wall(dist):
+    try:
+        vx = ai.selfVelX()
+        vy = ai.selfVelY()
+        if vx != 0 or vy != 0:
+            direction = math.degrees (math.atan2 (vy, vx))
+
+            distance_to_wall = ai.wallFeeler (dist, int(direction), 1, 1)  
+            # ai.wallFeller return dist if there is no wall in the direction
+            # and nearer than dist. If there is a wall nearer than dist it
+            # returns the actual distance to the wall.
+
+            return dist != distance_to_wall
+
+    except:
+        e = sys.exc_info()
+        print ("ERROR check_wall: ", e)
+
+    return False
 
 bot = myai()
 
@@ -285,13 +258,9 @@ AI_loop()
 
 (options, args) = parser.parse_args()
 port = 15345 + options.group
-name = "Voldemort"
+name = "BurgerFan007"
 
 
 # The command line arguments to xpilot can be given in the list in the second argument
 # 
-ai.start(AI_loop,["-name", name,
-                  "-join", 
-                  "-fuelMeter", "yes", 
-                  "-showHUD", "no",
-                  "-port", str(port)])
+ai.start(AI_loop,[])#"-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
