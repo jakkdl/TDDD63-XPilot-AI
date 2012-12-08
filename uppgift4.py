@@ -118,10 +118,21 @@ def intersection(selfLine, shotLine):
     if not selfLine or not shotLine:
         return("Error, wrong input to intersection function")
     elif selfLine == shotLine:
-        return(False)
+        return False
     else: 
         return(returnList)
 
+def time(intersectCoords, returnList):
+    intersectY = intersectCoords[1]
+    if not returnList:
+        return("Error, invalid input to time function")
+    else: 
+        intersectTime = intersectY/returnList[0] - returnList[1]
+        return intersectTime
+
+def timeStill(x, y, returnList):
+    time = (y-returnList[1]) / (returnList[0])
+    return time
 
 #Calculates the danger of every shot in the immediate viscinity of the ship, using above functions. Returns a 5 degree turn adjustment, positive or negative depending on which small evasion is needed. If this is insufficient the next tick will catch it and force another 5 degree adjustment.
 def danger():
@@ -170,20 +181,20 @@ def danger():
                     selfStraightLine = straightLine(selfX, selfY, selfVelX, selfVelY)
                     shotStraightLine = straightLine(shotX, shotY, shotVelX, shotVelY)
                     if selfX < shotX:
-                        return(-5) 
+                        return("neg") 
                     elif selfX > shotX:
-                        return(5)
+                        return("pos")
                     else:
                         if selfY < shotY: 
-                            return(-5)
+                            return("neg")
                         else:
-                            return(5)
+                            return("pos")
                     
                 elif ai.shotDist(i) < 200 and selfVel == 0:
                  
                     intersectCoords = interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY))
                     if intersectCoords == True:
-                        return(5)
+                        return("pos")
                     else:
                         pass
 
