@@ -4,7 +4,19 @@ The approach we chose early on was to keep it all in one class. We let different
 
 All the functions can be called and accessed from any mode, depending on what is needed. Our reasoning for this is to allow for easier modification throughout (and possibly after) the project, along with making it easier to read. In its current form it's easy to go through, see what functions are called and used, and what they are used for. Splitting the program up into classes makes it harder to get a complete view of what is going on, and also means that the two classes may require the same function or identical variables at the same time. Therefor we feel that our approach is both more efficient and easier to work with. 
 
-The dodge function has been rewritten dozens of times at this point. At this point the end product is based entirely on linear equations and trigonometry. At first we attempted to use snippets of code from elsewhere and find a working way, which we did, but far from satisfactory. As we did not completely understand the math behind it, it was near impossible to get it tuned. Now it is based entirely on math we understand, and although far bulkier than the initial versions, it is easier to fine tune and optimize. 
+The actions of the ship are controlled by different modes that kick in depending on what is happening. Init mode kicks in when the ship spawns. After three ticks ready mode kicks in. This is because a lot of functions get very strange readings prior to that point. Ready mode quickly reads what is going on around the ship, and determines the best cause of action. If there are no hostile ships nearby, it finds a suitable target and starts hunting it.
+
+Movement mode constantly scans for incoming shots, walls, and ships in range to fire at. 
+
+If an incoming shot is detected, dodge mode is activated. It uses the dodge function to determine how much dodging is needed, and looks for more incoming shots, and if everything is safe it goes into the next appropriate mode.
+
+
+
+The movement function takes an enemy ship's radar coordinates and uses that as target destination, making the ship follow it's target. Once close enough to engage in combat, it will go into shooting mode. If a hostile shot gets close enough and is in danger of hitting, it will go into dodge mode.
+
+The shooting / aiming functions are based on trigonomtry and some vector math. Once a target is in range (visible on the screen), if the conditions are right (no incoming hostile fire, no walls in between, etc) the plane will go into shooting mode. It uses the screen coordinates and velocity of the enemy ship to calculate a good direction to fire, in order to maximize chances to hit, rather than just firing at the current location of the enemy. 
+
+The dodge function has been rewritten dozens of times by now. At this point the end product is based entirely on linear equations and trigonometry. At first we attempted to use snippets of code from elsewhere and find a working way, which we did, but far from satisfactory. As we did not completely understand the math behind it, it was near impossible to get it tuned. Now it is based entirely on math we understand, and although far bulkier than the initial versions, it is easier to fine tune and optimize. 
 
 It loops through every shot ID from 0 to 99 within a radius of 200 units from the ship and tests the danger of all shots that are hostile (have a danger rating above -1). It calculates a linear equation for the shot trajectory and compares it with the current linear equation of the ship. If the two lines cross and, the shot and the ship are estimated to cross it at approximately the same time, it kicks in dodge mode. Dodge mode makes it change course slightly, and test for continued danger. If it's still in danger of getting hit it will keep changing the course until it determines that the danger is over, at which point it goes back to ready mode to determine what the best course of action would be. 
 
