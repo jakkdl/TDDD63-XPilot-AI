@@ -132,9 +132,6 @@ class myai:
                     self.count = 0
                     self.mode = "waitnowall"
 
-            #
-            # Wait until we have "bounced" away from the wall.
-            #
             elif self.mode == "waitnowall":
                 if not check_wall(self.checkDist) and self.count > 20:
                     self.mode = "ready"
@@ -148,7 +145,7 @@ class myai:
                 else:
                     #degreeDiff=
                     self.wanted_heading=shoot(ai.closestShipId())
-                    ai.turnToDeg(shoot(ai.closestShipId()))
+                    ai.turnToDeg(self.wanted_heading)
                     #if degreeDiff < 3:
                     ai.fireShot()
             #
