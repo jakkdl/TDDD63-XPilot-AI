@@ -60,7 +60,7 @@ class myai:
             selfDirection = ai.selfTrackingDeg()
             heading = ai.selfHeadingDeg()
             
-            print(self.mode, selfDirection, self.wanted_heading, speed)
+            print(self.count, self.mode, selfDirection, self.wanted_heading, speed)
 
             # The coordinate for the ships position in the radar coordinate system, 
             # (0,0) is bottom left.
@@ -93,7 +93,7 @@ class myai:
 
             # avoid strange sensor values when starting by waiting
             # three ticks until we go to fly
-            if self.count == 3:
+            if self.count == 3 and self.mode != "waitnowall":
                 self.mode = "ready"
 
             elif self.mode == "ready":
@@ -124,13 +124,16 @@ class myai:
             # Wait until wanted heading is achieved. Then go to state waitnowall.
             #
             elif self.mode == "turning":
-                ai.turnToDeg(self.wanted_heading)
+                egenAngle=int(ai.selfHeadingDeg())
+                diffAngle=ai.angleDiff(egenAngle,self.wanted_heading)
+                #ai.turnToDeg(self.wanted_heading)
+                ai.turn(diffAngle)
                 if abs(ai.angleDiff (int(heading), int(self.wanted_heading))) < 20:
                     self.count = 0
                     self.mode = "waitnowall"
 
             elif self.mode == "waitnowall":
-                if not CheckWall(self.checkDist) and self.count > 20:
+                if not CheckWall(self.checkDist) and self.count > 10:
                     self.mode = "ready"
                 
                 ai.thrust(1)
@@ -143,8 +146,10 @@ class myai:
                     #degreeDiff=
                     self.wanted_heading=Shoot(ai.closestShipId())
                     if self.wanted_heading == False:
+                        print("false")
                         return
-                    ai.turnToDeg(self.wanted_heading)
+                    #ai.turnToDeg(self.wanted_heading)
+                    ai.turn(self.wanted_heading)
                     #if degreeDiff < 3:
                     ai.fireShot()
             #
@@ -205,7 +210,10 @@ def Shoot(id):
     targetAngle=math.atan2(targetY-selfY,targetX-selfX)
     targetAngle=ai.radToDeg(targetAngle)
 
-    return targetAngle+random.randint(-10,10)
+    egenAngle=int(ai.selfHeadingDeg())
+    diffAngle=ai.angleDiff(egenAngle,targetAngle)
+
+    return diffAngle+random.randint(-10,10)
 
 def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 
@@ -227,8 +235,8 @@ def FlyTo(targetX,targetY,selfX,selfY):
     targetAngle=ai.radToDeg(targetAngle)
     egenAngle=int(ai.selfHeadingDeg())
     diffAngle=ai.angleDiff(egenAngle,targetAngle)
-    diffX=selfX-targetX
-    diffY=selfY-targetY
+    #diffX=selfX-targetX
+    #diffY=selfY-targetY
 
     return diffAngle
         
