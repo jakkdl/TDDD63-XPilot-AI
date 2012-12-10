@@ -26,6 +26,7 @@ class myai:
         self.wanted_heading = 90
         self.mode = "init"        # used to store the current state of the state machine
         random.seed()
+        self.checkDist = 600
 
 
 
@@ -40,7 +41,7 @@ class myai:
             if not ai.selfAlive():
                 self.count = 0
                 self.mode = "init"
-                self.wanted_minimal_speed = 0
+                self.wantedMaximalSpeed = 30
                 self.wanted_heading = 90   
                 return
 
@@ -59,7 +60,7 @@ class myai:
             selfDirection = ai.selfTrackingDeg()
             heading = ai.selfHeadingDeg()
             
-            print(self.mode, self.wanted_heading)
+            print(self.mode, selfDirection, self.wanted_heading, speed)
 
             # The coordinate for the ships position in the radar coordinate system, 
             # (0,0) is bottom left.
@@ -78,7 +79,7 @@ class myai:
             #
             
             # At all times we want to check if we are crashing into anything, unless we are already avoiding it
-            if check_wall(300) and self.mode != "turning":
+            if check_wall(self.checkDist) and self.mode != "turning":
                 self.wanted_heading = int(ai.selfHeadingDeg()) # 0-360, 0 in x direction, positive toward y
                 self.wanted_heading += 90
                 self.wanted_heading %= 360
@@ -102,7 +103,7 @@ class myai:
                    self.mode = "shooting"
             
             elif self.mode == "moving":
-                if speed < 10:
+                if speed < self.wantedMaximalSpeed:
                     ai.thrust(1)
                 else:
                     ai.thrust(0)
@@ -135,7 +136,7 @@ class myai:
             # Wait until we have "bounced" away from the wall.
             #
             elif self.mode == "waitnowall":
-                if not check_wall(300) and self.count > 10:
+                if not check_wall(self.checkDist) and self.count > 20:
                     self.mode = "ready"
                 
                 ai.thrust(1)
@@ -389,4 +390,4 @@ name = "Voldemort"
 
 # The command line arguments to xpilot can be given in the list in the second argument
 # 
-ai.start(AI_loop,["-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
+ai.start(AI_loop,[])#"-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
