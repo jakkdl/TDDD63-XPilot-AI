@@ -125,9 +125,6 @@ class myai:
             #
             elif self.mode == "turning":
                 ai.turnToDeg(self.wanted_heading)
-                #if not check_wall(300):
-                    #self.mode = "ready"
-                print(int(heading), int(self.wanted_heading))
                 if abs(ai.angleDiff (int(heading), int(self.wanted_heading))) < 20:
                     self.count = 0
                     self.mode = "waitnowall"
@@ -235,11 +232,6 @@ def flyTo(targetX,targetY,selfX,selfY):
 
     return diffAngle
         
-
-
-#
-# Returns true if there is a wall nearer than dist in the direction the
-# ship is moving (not the direction it is pointing!). Otherwise returns false.
 def check_wall(dist):
     try:
         vx = ai.selfVelX()
@@ -291,18 +283,6 @@ def intersection(selfLine, shotLine):
         return False
     else: 
         return(returnList)
-
-def time(intersectCoords, returnList):
-    intersectY = intersectCoords[1]
-    if not returnList:
-        return("Error, invalid input to time function")
-    else: 
-        intersectTime = intersectY/returnList[0] - returnList[1]
-        return intersectTime
-
-def timeStill(x, y, returnList):
-    time = (y-returnList[1]) / (returnList[0])
-    return time
 
 #Calculates the danger of every shot in the immediate viscinity of the ship, using above functions. If there is no danger it will return False. If there is danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
 def danger():
