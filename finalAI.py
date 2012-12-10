@@ -84,6 +84,12 @@ class myai:
                 self.wanted_heading %= 360
                 self.mode = "turning"
             
+            if danger() != False:
+                    self.mode = "dodge"
+            
+            
+
+
             # avoid strange sensor values when starting by waiting
             # three ticks until we go to fly
             if self.count == 3:
@@ -104,6 +110,14 @@ class myai:
                 ai.turn(turnThisWay)
                 if ai.closestShipId() != -1:
                     self.mode = "shooting"
+            
+            elif self.mode == "dodge":
+                if danger() == "pos":
+                    ai.turnLeft(1)
+                elif danger() == "neg":
+                    ai.turnRight(1)
+                elif danger() == False:
+                    self.mode = "ready"
 
             #
             # Wait until wanted heading is achieved. Then go to state waitnowall.
@@ -248,6 +262,118 @@ def check_wall(dist):
 
     return False
 
+#For a ship that is unmoving. Will the trajectory of the shot cross the location of the ship? 
+
+def interPointLine(x, y, returnList):
+    cross = returnList[0]*x+returnList[1]
+    
+    if cross == y:
+        return(True)
+    elif (cross - y) < 25 and (cross - y) > -25:
+        return(True)
+    else:
+        return(False)
+
+#Calculates the straight line equation, and returns the k and m values.
+def straightLine(x, y, velX, velY):
+    valueK = velY/velX
+    valueM = y-x*valueK
+    returnList = [valueK, valueM]
+    return(returnList)
+
+
+#Checks whether, and where, two straight lines will intersect. Returns a value for (x,y) where the lines cross.
+def intersection(selfLine, shotLine):
+    valueX = (selfLine[1]-shotLine[1])/(shotLine[0]-selfLine[0])
+    valueY = selfLine[0]*valueX+selfLine[1]
+    returnList = [valueX, valueY]
+    if not selfLine or not shotLine:
+        return("Error, wrong input to intersection function")
+    elif selfLine == shotLine:
+        return False
+    else: 
+        return(returnList)
+
+def time(intersectCoords, returnList):
+    intersectY = intersectCoords[1]
+    if not returnList:
+        return("Error, invalid input to time function")
+    else: 
+        intersectTime = intersectY/returnList[0] - returnList[1]
+        return intersectTime
+
+def timeStill(x, y, returnList):
+    time = (y-returnList[1]) / (returnList[0])
+    return time
+
+#Calculates the danger of every shot in the immediate viscinity of the ship, using above functions. If there is no danger it will return False. If there is danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
+def danger():
+    enId = ai.closestShipId()
+    selfX = ai.selfX()
+    selfY = ai.selfY()
+    selfVel = ai.selfSpeed()
+    selfVelX = ai.selfVelX()
+    selfVelY = ai.selfVelY()
+    for i in range(99):
+        if ai.shotAlert(i) == -1:
+            return False
+        else:
+            shotX = ai.shotX(i)
+            shotY = ai.shotY(i)
+            shotTrack = ai.shotVelDir(i)
+            shotVel = 21 + ai.enemySpeedId(enId) # The 10 may vary depending on map, 21 for final.xp.
+            shotVelX = shotVel*math.cos(shotTrack)
+            shotVelY = shotVel*math.sin(shotTrack)
+            
+            if selfVel > 0 and shotVelX == 0:
+                shotVelX += 0.01
+            
+            elif selfVel > 0 and shotVelY == 0:
+                shotVelY += 0.01
+                
+            elif selfVel > 0 and selfVelX == 0:
+                selfVelX += 0.01
+            
+            elif selfVel > 0 and selfVelY == 0:
+                selfVelY += 0.01
+                
+            else:
+
+                if ai.shotDist(i) > 200:
+                    return(False)
+
+                elif selfVel == 0 and interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+                    return(False)
+            
+           # elif selfVel == 0 and interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY)) == True:
+                #return(5)
+
+                elif ai.shotDist(i) < 200 and selfVel > 0:
+                    intersectCoords = intersection(straightLine(selfX, selfY, selfVelX, selfVelY), straightLine(shotX, shotY, shotVelX, shotVelY))
+                    selfStraightLine = straightLine(selfX, selfY, selfVelX, selfVelY)
+                    shotStraightLine = straightLine(shotX, shotY, shotVelX, shotVelY)
+                    if selfX < shotX:
+                        return("neg") 
+                    elif selfX > shotX:
+                        return("pos")
+                    else:
+                        if selfY < shotY: 
+                            return("neg")
+                        else:
+                            return("pos")
+                    
+                elif ai.shotDist(i) < 200 and selfVel == 0:
+                 
+                    intersectCoords = interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY))
+                    if intersectCoords == True:
+                        return("pos")
+                    else:
+                        pass
+
+                break
+
+
+
 bot = myai()
 
 def AI_loop():
@@ -258,9 +384,9 @@ AI_loop()
 
 (options, args) = parser.parse_args()
 port = 15345 + options.group
-name = "BurgerFan007"
+name = "Voldemort"
 
 
 # The command line arguments to xpilot can be given in the list in the second argument
 # 
-ai.start(AI_loop,[])#"-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
+ai.start(AI_loop,["-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
