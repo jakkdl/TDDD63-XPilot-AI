@@ -79,13 +79,13 @@ class myai:
             #
             
             # At all times we want to check if we are crashing into anything, unless we are already avoiding it
-            if check_wall(self.checkDist) and self.mode != "turning":
+            if CheckWall(self.checkDist) and self.mode != "turning":
                 self.wanted_heading = int(ai.selfHeadingDeg()) # 0-360, 0 in x direction, positive toward y
                 self.wanted_heading += 90
                 self.wanted_heading %= 360
                 self.mode = "turning"
             
-            if danger() != False:
+            if Danger() != False:
                     self.mode = "dodge"
             
             
@@ -107,17 +107,17 @@ class myai:
                     ai.thrust(1)
                 else:
                     ai.thrust(0)
-                turnThisWay=flyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
+                turnThisWay=FlyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
                 ai.turn(turnThisWay)
                 if ai.closestShipId() != -1:
                     self.mode = "shooting"
             
             elif self.mode == "dodge":
-                if danger() == "pos":
+                if Danger() == "pos":
                     ai.turnLeft(1)
-                elif danger() == "neg":
+                elif Danger() == "neg":
                     ai.turnRight(1)
-                elif danger() == False:
+                elif Danger() == False:
                     self.mode = "ready"
 
             #
@@ -130,7 +130,7 @@ class myai:
                     self.mode = "waitnowall"
 
             elif self.mode == "waitnowall":
-                if not check_wall(self.checkDist) and self.count > 20:
+                if not CheckWall(self.checkDist) and self.count > 20:
                     self.mode = "ready"
                 
                 ai.thrust(1)
@@ -141,7 +141,7 @@ class myai:
                     self.mode = "ready"
                 else:
                     #degreeDiff=
-                    self.wanted_heading=shoot(ai.closestShipId())
+                    self.wanted_heading=Shoot(ai.closestShipId())
                     ai.turnToDeg(self.wanted_heading)
                     #if degreeDiff < 3:
                     ai.fireShot()
@@ -164,7 +164,7 @@ class myai:
             e = sys.exc_info()
             print ("ERROR: ", e)
 
-def shoot(id):
+def Shoot(id):
     selfX=ai.selfX()
     selfY=ai.selfY()
     selfVelocity=ai.selfSpeed()
@@ -192,26 +192,21 @@ def shoot(id):
     relativeVelocityY=enemyVelocityY-selfVelocityY
 
 
-    time=timeOfImpact(relativeX, relativeY, relativeVelocityX, relativeVelocityY, bulletVelocity)
+    time=TimeOfImpact(relativeX, relativeY, relativeVelocityX, relativeVelocityY, bulletVelocity)
 
     targetX=enemyX+enemyVelocityX*time
     targetY=enemyY+enemyVelocityY*time
     targetAngle=math.atan2(targetY-selfY,targetX-selfX)
     targetAngle=ai.radToDeg(targetAngle)
 
-
-
-
     return targetAngle+random.randint(-10,10)
 
-def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 
     a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
     b=relativeX*targetSpeedX+relativeY*targetSpeedY
     c=relativeX*relativeX+relativeY*relativeY
-
     d=b*b+a*c
-    
     time=0
 
     if d >= 0:
@@ -221,7 +216,7 @@ def timeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
 
     return time
 	
-def flyTo(targetX,targetY,selfX,selfY):
+def FlyTo(targetX,targetY,selfX,selfY):
     targetAngle=math.atan2(targetY-selfY,targetX-selfX)
     targetAngle=ai.radToDeg(targetAngle)
     egenAngle=int(ai.selfHeadingDeg())
@@ -229,10 +224,9 @@ def flyTo(targetX,targetY,selfX,selfY):
     diffX=selfX-targetX
     diffY=selfY-targetY
 
-
     return diffAngle
         
-def check_wall(dist):
+def CheckWall(dist):
     try:
         vx = ai.selfVelX()
         vy = ai.selfVelY()
@@ -248,13 +242,13 @@ def check_wall(dist):
 
     except:
         e = sys.exc_info()
-        print ("ERROR check_wall: ", e)
+        print ("ERROR CheckWall: ", e)
 
     return False
 
 #For a ship that is unmoving. Will the trajectory of the shot cross the location of the ship? 
 
-def interPointLine(x, y, returnList):
+def InterPointLine(x, y, returnList):
     cross = returnList[0]*x+returnList[1]
     
     if cross == y:
@@ -265,7 +259,7 @@ def interPointLine(x, y, returnList):
         return(False)
 
 #Calculates the straight line equation, and returns the k and m values.
-def straightLine(x, y, velX, velY):
+def StraightLine(x, y, velX, velY):
     valueK = velY/velX
     valueM = y-x*valueK
     returnList = [valueK, valueM]
@@ -273,19 +267,19 @@ def straightLine(x, y, velX, velY):
 
 
 #Checks whether, and where, two straight lines will intersect. Returns a value for (x,y) where the lines cross.
-def intersection(selfLine, shotLine):
+def Intersection(selfLine, shotLine):
     valueX = (selfLine[1]-shotLine[1])/(shotLine[0]-selfLine[0])
     valueY = selfLine[0]*valueX+selfLine[1]
     returnList = [valueX, valueY]
     if not selfLine or not shotLine:
-        return("Error, wrong input to intersection function")
+        return("Error, wrong input to Intersection function")
     elif selfLine == shotLine:
         return False
     else: 
         return(returnList)
 
-#Calculates the danger of every shot in the immediate viscinity of the ship, using above functions. If there is no danger it will return False. If there is danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
-def danger():
+#Calculates the Danger of every shot in the immediate viscinity of the ship, using above functions. If there is no Danger it will return False. If there is Danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
+def Danger():
     enId = ai.closestShipId()
     selfX = ai.selfX()
     selfY = ai.selfY()
@@ -320,16 +314,16 @@ def danger():
                 if ai.shotDist(i) > 200:
                     return(False)
 
-                elif selfVel == 0 and interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+                elif selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == False:
                     return(False)
             
-           # elif selfVel == 0 and interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY)) == True:
+           # elif selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == True:
                 #return(5)
 
                 elif ai.shotDist(i) < 200 and selfVel > 0:
-                    intersectCoords = intersection(straightLine(selfX, selfY, selfVelX, selfVelY), straightLine(shotX, shotY, shotVelX, shotVelY))
-                    selfStraightLine = straightLine(selfX, selfY, selfVelX, selfVelY)
-                    shotStraightLine = straightLine(shotX, shotY, shotVelX, shotVelY)
+                    intersectCoords = Intersection(StraightLine(selfX, selfY, selfVelX, selfVelY), StraightLine(shotX, shotY, shotVelX, shotVelY))
+                    selfStraightLine = StraightLine(selfX, selfY, selfVelX, selfVelY)
+                    shotStraightLine = StraightLine(shotX, shotY, shotVelX, shotVelY)
                     if selfX < shotX:
                         return("neg") 
                     elif selfX > shotX:
@@ -342,7 +336,7 @@ def danger():
                     
                 elif ai.shotDist(i) < 200 and selfVel == 0:
                  
-                    intersectCoords = interPointLine(selfX, selfY, straightLine(shotX, shotY, shotVelX, shotVelY))
+                    intersectCoords = InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY))
                     if intersectCoords == True:
                         return("pos")
                     else:
