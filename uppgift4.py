@@ -56,7 +56,6 @@ class myai:
             vy = ai.selfVelY()
             selfDirection = ai.selfTrackingDeg()
             # Add more sensors readings here if they are needed
-            dodgeAngle = danger()
             ai.setTurnSpeed(64.0)
 
             print(self.mode, x, ai.shotX(0), "-", y, ai.shotY(0), "-")
@@ -67,17 +66,23 @@ class myai:
                 self.mode = "Ready"
             
             elif self.mode == "Ready":
+                ai.thrust(0)
                 if danger() != False:
                     self.mode = "Dodge"
                 else: 
                     pass
             
             elif self.mode == "Dodge":
-                ai.turn(dodgeAngle)
-                if speed < 2:
-                    ai.thrust(1)
+                if danger() == "pos":
+                    ai.turnLeft(1)
+                elif danger() == "neg":
+                    ai.turnRight(1)
+                    
+                
                 elif danger() == False:
                     self.mode = "Ready"
+                if speed < 2:
+                    ai.thrust(1)
                 
                 
 #Below if puts the bot back in ready mode if danger subsides.                                                          .
@@ -97,7 +102,7 @@ def interPointLine(x, y, returnList):
     
     if cross == y:
         return(True)
-    elif (cross - y) < 10 and (cross - y) > -10:
+    elif (cross - y) < 25 and (cross - y) > -25:
         return(True)
     else:
         return(False)
