@@ -142,6 +142,8 @@ class myai:
                 else:
                     #degreeDiff=
                     self.wanted_heading=Shoot(ai.closestShipId())
+                    if self.wanted_heading == False:
+                        return
                     ai.turnToDeg(self.wanted_heading)
                     #if degreeDiff < 3:
                     ai.fireShot()
@@ -165,6 +167,8 @@ class myai:
             print ("ERROR: ", e)
 
 def Shoot(id):
+    if id == -1:
+        return False
     selfX=ai.selfX()
     selfY=ai.selfY()
     selfVelocity=ai.selfSpeed()
@@ -176,16 +180,18 @@ def Shoot(id):
 
 
 
+
     enemyX=ai.screenEnemyXId(id)
     enemyY=ai.screenEnemyYId(id)
     enemyVelocity=ai.enemySpeedId(id)
     enemyTracking=ai.enemyTrackingRadId(id)
+    if enemyTracking == None:
+        return False
     if math.isnan(enemyTracking):
         enemyTracking=0
     enemyVelocityX=enemyVelocity*math.cos(enemyTracking)
     enemyVelocityY=enemyVelocity*math.sin(enemyTracking)
     bulletVelocity=21 #final.xp
-
     relativeX=enemyX-selfX
     relativeY=enemyY-selfY
     relativeVelocityX=enemyVelocityX-selfVelocityX
@@ -239,6 +245,8 @@ def CheckWall(dist):
             # returns the actual distance to the wall.
 
             return dist != distance_to_wall
+        else:
+            return False
 
     except:
         e = sys.exc_info()
