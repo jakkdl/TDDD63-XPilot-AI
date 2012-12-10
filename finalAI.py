@@ -2,7 +2,6 @@ import libpyAI as ai
 
 import sys
 import math
-import random
 
 from optparse import OptionParser
 
