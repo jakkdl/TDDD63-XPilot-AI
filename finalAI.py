@@ -1,5 +1,6 @@
 import libpyAI as ai
 
+import random
 import sys
 import math
 
