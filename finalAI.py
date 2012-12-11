@@ -273,6 +273,8 @@ def InterPointLine(x, y, returnList):
 
 #Calculates the straight line equation, and returns the k and m values.
 def StraightLine(x, y, velX, velY):
+    if velX==0:
+        velX=0.001 #ugly hack to fix bad implementation
     valueK = velY/velX
     valueM = y-x*valueK
     returnList = [valueK, valueM]
@@ -281,6 +283,10 @@ def StraightLine(x, y, velX, velY):
 
 #Checks whether, and where, two straight lines will intersect. Returns a value for (x,y) where the lines cross.
 def Intersection(selfLine, shotLine):
+    if shotLine[0]==0:
+        shotLine[0]=0.001 #ugly hack to fix bad implementation
+    if selfLine[0]==0:
+        selfLine[0]=0.001 #ugly hack to fix bad implementation
     valueX = (selfLine[1]-shotLine[1])/(shotLine[0]-selfLine[0])
     valueY = selfLine[0]*valueX+selfLine[1]
     returnList = [valueX, valueY]
@@ -306,56 +312,43 @@ def Danger():
             shotX = ai.shotX(i)
             shotY = ai.shotY(i)
             shotTrack = ai.shotVelDir(i)
-            shotVel = 21 + ai.enemySpeedId(enId) # The 10 may vary depending on map, 21 for final.xp.
+            shotVel = ai.shotVel(i)
             shotVelX = shotVel*math.cos(shotTrack)
             shotVelY = shotVel*math.sin(shotTrack)
             
-            if selfVel > 0 and shotVelX == 0:
-                shotVelX += 0.01
-            
-            elif selfVel > 0 and shotVelY == 0:
-                shotVelY += 0.01
-                
-            elif selfVel > 0 and selfVelX == 0:
-                selfVelX += 0.01
-            
-            elif selfVel > 0 and selfVelY == 0:
-                selfVelY += 0.01
-                
-            else:
 
-                if ai.shotDist(i) > 200:
-                    return(False)
+            #if ai.shotDist(i) > 200: #this should never happen, i see no reason to have it but only commenting it out for now
+                #return(False)
 
-                elif selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == False:
-                    return(False)
-            
-           # elif selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == True:
-                #return(5)
+            if selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+                return(False)
+        
+            #elif selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == True:
+            #return(5)
 
-                elif ai.shotDist(i) < 200 and selfVel > 0:
-                    intersectCoords = Intersection(StraightLine(selfX, selfY, selfVelX, selfVelY), StraightLine(shotX, shotY, shotVelX, shotVelY))
-                    selfStraightLine = StraightLine(selfX, selfY, selfVelX, selfVelY)
-                    shotStraightLine = StraightLine(shotX, shotY, shotVelX, shotVelY)
-                    if selfX < shotX:
-                        return("neg") 
-                    elif selfX > shotX:
-                        return("pos")
+            elif ai.shotDist(i) < 200 and selfVel > 0:
+                intersectCoords = Intersection(StraightLine(selfX, selfY, selfVelX, selfVelY), StraightLine(shotX, shotY, shotVelX, shotVelY))
+                selfStraightLine = StraightLine(selfX, selfY, selfVelX, selfVelY)
+                shotStraightLine = StraightLine(shotX, shotY, shotVelX, shotVelY)
+                if selfX < shotX:
+                    return("neg") 
+                elif selfX > shotX:
+                    return("pos")
+                else:
+                    if selfY < shotY: 
+                        return("neg")
                     else:
-                        if selfY < shotY: 
-                            return("neg")
-                        else:
-                            return("pos")
-                    
-                elif ai.shotDist(i) < 200 and selfVel == 0:
-                 
-                    intersectCoords = InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY))
-                    if intersectCoords == True:
                         return("pos")
-                    else:
-                        pass
+                
+            elif ai.shotDist(i) < 200 and selfVel == 0:
+             
+                intersectCoords = InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY))
+                if intersectCoords == True:
+                    return("pos")
+                else:
+                    pass
 
-                break
+            break
 
 
 
@@ -369,7 +362,7 @@ AI_loop()
 
 (options, args) = parser.parse_args()
 port = 15345 + options.group
-name = "Voldemort"
+name = random.randint(1, 999999)
 
 
 # The command line arguments to xpilot can be given in the list in the second argument
