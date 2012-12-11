@@ -28,9 +28,6 @@ class myai:
         random.seed()
         self.checkDist = 600
 
-
-
-
     def tick(self):
         try:
 
@@ -41,7 +38,7 @@ class myai:
             if not ai.selfAlive():
                 self.count = 0
                 self.mode = "init"
-                self.wantedMaximalSpeed = 30
+                self.wantedMaximalSpeed = 25
                 self.wanted_heading = 90   
                 return
 
@@ -51,7 +48,7 @@ class myai:
             #
             # Read the ships "sensors".
             #
-            ai.setTurnSpeed(30.0)
+            ai.setTurnSpeed(64.0)
             x = ai.selfX()
             y = ai.selfY()
             vx = ai.selfVelX()
@@ -126,8 +123,8 @@ class myai:
             elif self.mode == "turning":
                 egenAngle=int(ai.selfHeadingDeg())
                 diffAngle=ai.angleDiff(egenAngle,self.wanted_heading)
-                #ai.turnToDeg(self.wanted_heading)
-                ai.turn(diffAngle)
+                ai.turnToDeg(self.wanted_heading)
+                #ai.turn(diffAngle)
                 if abs(ai.angleDiff (int(heading), int(self.wanted_heading))) < 20:
                     self.count = 0
                     self.mode = "waitnowall"
@@ -377,4 +374,4 @@ name = "Voldemort"
 
 # The command line arguments to xpilot can be given in the list in the second argument
 # 
-ai.start(AI_loop,[])#"-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
+ai.start(AI_loop,["-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
