@@ -48,16 +48,19 @@ class myai:
             #
             # Read the ships "sensors".
             #
-            ai.setTurnSpeed(64.0)
+            #ai.setTurnSpeed(64.0)
             x = ai.selfX()
             y = ai.selfY()
             vx = ai.selfVelX()
             vy = ai.selfVelY()
             speed = ai.selfSpeed()
-            selfDirection = ai.selfTrackingDeg()
+            tracking = ai.selfTrackingDeg()
+            if math.isnan(tracking):
+                tracking=0
             heading = ai.selfHeadingDeg()
+
             
-            print(self.count, self.mode, selfDirection, self.wanted_heading, speed)
+            print(self.count, self.mode, tracking, heading, self.wanted_heading, speed)
 
             # The coordinate for the ships position in the radar coordinate system, 
             # (0,0) is bottom left.
@@ -76,15 +79,16 @@ class myai:
             #
             
             # At all times we want to check if we are crashing into anything, unless we are already avoiding it
-            if CheckWall(self.checkDist) and self.mode != "turn":
-                self.wanted_heading = int(ai.selfHeadingDeg()) # 0-360, 0 in x direction, positive toward y
+            if ((CheckWall(self.checkDist, heading) and self.mode != "turn") or (CheckWall(self.checkDist, tracking) and self.mode != "wait")) and tracking != 0:
+                print("INCOMING WALL")
+                self.wanted_heading = int(tracking) # 0-360, 0 in x direction, positive toward y
                 self.wanted_heading += 90
                 self.wanted_heading %= 360
                 self.mode = "turn"
             
             if Danger() != False:
-                    self.mode = "dodge"
-            
+                print("INCOMING SHOT DETECTED")
+                self.mode = "dodge"
             
 
 
@@ -100,6 +104,7 @@ class myai:
                    self.mode = "shoot"
             
             elif self.mode == "move":
+                ai.fireShot()
                 if speed < self.wantedMaximalSpeed:
                     ai.thrust(1)
                 else:
@@ -110,18 +115,27 @@ class myai:
                     self.mode = "shoot"
             
             elif self.mode == "dodge":
-                if Danger() == "pos":
-                    ai.turnLeft(1)
-                elif Danger() == "neg":
-                    ai.turnRight(1)
-                elif Danger() == False:
-                    self.mode = "ready"
+                incAngle=Danger()
+                if ai.angleDiff(int(incAngle), int(tracking+180)) > 5:
+                    self.count=0
+                    self.mode = "wait"
+                else:
+                    ai.turnToDeg(int(tracking+90))
+                    self.count=0
+                    self.mode == "wait"
+#                if Danger() == "pos":
+#                    ai.turnLeft(1)
+#                elif Danger() == "neg":
+#                    ai.turnRight(1)
+#                elif Danger() == False:
+#                    self.mode = "ready"
 
             #
             # Wait until wanted heading is achieved. Then go to state wait.
             #
             elif self.mode == "turn":
-                egenAngle=int(ai.selfHeadingDeg())
+                ai.thrust(0)
+                egenAngle=int(heading)
                 diffAngle=ai.angleDiff(egenAngle,self.wanted_heading)
                 ai.turnToDeg(self.wanted_heading)
                 #ai.turn(diffAngle)
@@ -237,21 +251,25 @@ def FlyTo(targetX,targetY,selfX,selfY):
 
     return diffAngle
         
-def CheckWall(dist):
+def CheckWall(dist, direction):
     try:
-        vx = ai.selfVelX()
-        vy = ai.selfVelY()
-        if vx != 0 or vy != 0:
-            direction = math.degrees (math.atan2 (vy, vx))
+        distance_to_wall = ai.wallFeeler(dist, int(direction), 1, 1)
+        return dist != distance_to_wall
 
-            distance_to_wall = ai.wallFeeler (dist, int(direction), 1, 1)  
-            # ai.wallFeller return dist if there is no wall in the direction
-            # and nearer than dist. If there is a wall nearer than dist it
-            # returns the actual distance to the wall.
 
-            return dist != distance_to_wall
-        else:
-            return False
+#        vx = ai.selfVelX()
+#        vy = ai.selfVelY()
+#        if vx != 0 or vy != 0:
+#            direction = math.degrees (math.atan2 (vy, vx))
+#
+#            distance_to_wall = ai.wallFeeler (dist, int(direction), 1, 1)  
+#            # ai.wallFeller return dist if there is no wall in the direction
+#            # and nearer than dist. If there is a wall nearer than dist it
+#            # returns the actual distance to the wall. ####omg lies. Shit. who wrote this?
+#
+#            return dist != distance_to_wall
+#        else:
+#            return False
 
     except:
         e = sys.exc_info()
@@ -297,6 +315,16 @@ def Intersection(selfLine, shotLine):
     else: 
         return(returnList)
 
+def LinesCross(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
+    #print(xVel2,xVel1,x2,x1,yVel2,yVel1,y2,y1)
+    timeX=(x2-x1)/(xVel2-xVel1)
+    timeY=(y2-y1)/(yVel2-yVel1)
+    #print (abs(timeX-timeY), timeX, timeY)
+    if abs(timeX-timeY) < 2:
+        return True
+    else:
+        return False
+
 #Calculates the Danger of every shot in the immediate viscinity of the ship, using above functions. If there is no Danger it will return False. If there is Danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
 def Danger():
     enId = ai.closestShipId()
@@ -315,40 +343,47 @@ def Danger():
             shotVel = ai.shotVel(i)
             shotVelX = shotVel*math.cos(shotTrack)
             shotVelY = shotVel*math.sin(shotTrack)
+
+            linesCross=LinesCross(selfX, selfY, selfVelX, selfVelY, shotX, shotY, shotVelX, shotVelY)
+
+            if linesCross==False:
+                return False
+            else:
+                return math.atan2(shotX-selfX, shotY-selfY)
             
 
-            #if ai.shotDist(i) > 200: #this should never happen, i see no reason to have it but only commenting it out for now
-                #return(False)
-
-            if selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == False:
-                return(False)
-        
-            #elif selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == True:
-            #return(5)
-
-            elif ai.shotDist(i) < 200 and selfVel > 0:
-                intersectCoords = Intersection(StraightLine(selfX, selfY, selfVelX, selfVelY), StraightLine(shotX, shotY, shotVelX, shotVelY))
-                selfStraightLine = StraightLine(selfX, selfY, selfVelX, selfVelY)
-                shotStraightLine = StraightLine(shotX, shotY, shotVelX, shotVelY)
-                if selfX < shotX:
-                    return("neg") 
-                elif selfX > shotX:
-                    return("pos")
-                else:
-                    if selfY < shotY: 
-                        return("neg")
-                    else:
-                        return("pos")
-                
-            elif ai.shotDist(i) < 200 and selfVel == 0:
-             
-                intersectCoords = InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY))
-                if intersectCoords == True:
-                    return("pos")
-                else:
-                    pass
-
-            break
+#            #if ai.shotDist(i) > 200: #this should never happen, i see no reason to have it but only commenting it out for now
+#                #return(False)
+#
+#            if selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == False:
+#                return(False)
+#        
+#            #elif selfVel == 0 and InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY)) == True:
+#            #return(5)
+#
+#            elif ai.shotDist(i) < 200 and selfVel > 0:
+#                intersectCoords = Intersection(StraightLine(selfX, selfY, selfVelX, selfVelY), StraightLine(shotX, shotY, shotVelX, shotVelY))
+#                selfStraightLine = StraightLine(selfX, selfY, selfVelX, selfVelY)
+#                shotStraightLine = StraightLine(shotX, shotY, shotVelX, shotVelY)
+#                if selfX < shotX:
+#                    return("neg") 
+#                elif selfX > shotX:
+#                    return("pos")
+#                else:
+#                    if selfY < shotY: 
+#                        return("neg")
+#                    else:
+#                        return("pos")
+#                
+#            elif ai.shotDist(i) < 200 and selfVel == 0:
+#             
+#                intersectCoords = InterPointLine(selfX, selfY, StraightLine(shotX, shotY, shotVelX, shotVelY))
+#                if intersectCoords == True:
+#                    return("pos")
+#                else:
+#                    pass
+#
+#            break
 
 
 
@@ -367,4 +402,4 @@ name = random.randint(1, 999999)
 
 # The command line arguments to xpilot can be given in the list in the second argument
 # 
-ai.start(AI_loop,["-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
+ai.start(AI_loop,[])#"-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
