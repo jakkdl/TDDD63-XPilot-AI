@@ -79,11 +79,11 @@ class myai:
             #
             
             # At all times we want to check if we are crashing into anything, unless we are already avoiding it
-            if CheckWall(self.checkDist) and self.mode != "turning":
+            if CheckWall(self.checkDist) and self.mode != "turn":
                 self.wanted_heading = int(ai.selfHeadingDeg()) # 0-360, 0 in x direction, positive toward y
                 self.wanted_heading += 90
                 self.wanted_heading %= 360
-                self.mode = "turning"
+                self.mode = "turn"
             
             if Danger() != False:
                     self.mode = "dodge"
@@ -93,16 +93,16 @@ class myai:
 
             # avoid strange sensor values when starting by waiting
             # three ticks until we go to fly
-            if self.count == 3 and self.mode != "waitnowall":
+            if self.count == 3 and self.mode != "wait":
                 self.mode = "ready"
 
             elif self.mode == "ready":
                 if ai.closestShipId() == -1:
-                   self.mode = "moving"
+                   self.mode = "move"
                 else:
-                   self.mode = "shooting"
+                   self.mode = "shoot"
             
-            elif self.mode == "moving":
+            elif self.mode == "move":
                 if speed < self.wantedMaximalSpeed:
                     ai.thrust(1)
                 else:
@@ -110,7 +110,7 @@ class myai:
                 turnThisWay=FlyTo(ai.closestRadarX(), ai.closestRadarY(),ai.selfRadarX(),ai.selfRadarY())
                 ai.turn(turnThisWay)
                 if ai.closestShipId() != -1:
-                    self.mode = "shooting"
+                    self.mode = "shoot"
             
             elif self.mode == "dodge":
                 if Danger() == "pos":
@@ -121,24 +121,24 @@ class myai:
                     self.mode = "ready"
 
             #
-            # Wait until wanted heading is achieved. Then go to state waitnowall.
+            # Wait until wanted heading is achieved. Then go to state wait.
             #
-            elif self.mode == "turning":
+            elif self.mode == "turn":
                 egenAngle=int(ai.selfHeadingDeg())
                 diffAngle=ai.angleDiff(egenAngle,self.wanted_heading)
                 #ai.turnToDeg(self.wanted_heading)
                 ai.turn(diffAngle)
                 if abs(ai.angleDiff (int(heading), int(self.wanted_heading))) < 20:
                     self.count = 0
-                    self.mode = "waitnowall"
+                    self.mode = "wait"
 
-            elif self.mode == "waitnowall":
-                if not CheckWall(self.checkDist) and self.count > 10:
+            elif self.mode == "wait":
+                if self.count > 10:
                     self.mode = "ready"
                 
                 ai.thrust(1)
 
-            elif self.mode == "shooting":
+            elif self.mode == "shoot":
                 ai.thrust(0)
                 if ai.closestShipId() == -1:
                     self.mode = "ready"
