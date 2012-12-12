@@ -108,33 +108,17 @@ class myai:
             # Adjust course if we want to head into a wall
             self.wantedHeading=AdjustCourse(self.checkDist, self.wantedHeading)
                                 
-                
 
-            
             # At all times we want to check if we are crashing into anything, unless we are already avoiding it
-            if CheckWall(self.checkDist, selfTracking) and self.mode != "thrust":
-                if self.wantedDirection == "": #If we haven't yet decided in what direction to turn to avoid the wall, test the different directions and decide
-                    distPositive=CheckWall(self.checkDist, selfTracking+45)
-                    distNegative=CheckWall(self.checkDist, selfTracking-45)
-                    if distPositive < distNegative:
-                        self.wantedDirection = "positive"
-                    else:
-                        self.wantedDirection = "negative"
-                
-                if self.wantedDirection == "positive": #Now we have decided and stick to it until the wall is no longer a danger
-                    self.wantedHeading = selfTracking+90%360
-                elif self.wantedDirection == "negative":
-                    self.wantedHeading = selfTracking-90%360
-
+            if self.mode != "thrust" and CheckWall(self.checkDist, selfTracking):
+                self.wantedDirection, self.wantedHeading = AvoidCrash(self.checkDist, selfTracking, self.wantedDirection)
                 self.mode = "turn"
             
+            
             # If we are close to being hit, try and avoid (Seldom works at final.xp's settings, but it's worth a try!)
-            if Danger(selfX, selfY, selfVelX, selfVelY) != False and self.mode != "turn":
+            if self.mode != "turn" and Danger(selfX, selfY, selfVelX, selfVelY) != False:
                 self.mode = "dodge"
             
-
-
-
             #
             # Start of state machine part
             #
@@ -202,6 +186,26 @@ class myai:
             e = sys.exc_info()
             print ("ERROR in statemachine: ", e)
 
+# At all times we want to check if we are crashing into anything, unless we are already avoiding it
+def AvoidCrash(checkDist, selfTracking, wantedDirection ):
+    try:
+        if wantedDirection == "": #If we haven't yet decided in what direction to turn to avoid the wall, test the different directions and decide
+            distPositive=CheckWall(checkDist, selfTracking+45)
+            distNegative=CheckWall(checkDist, selfTracking-45)
+            if distPositive < distNegative:
+                wantedDirection = "positive"
+            else:
+                wantedDirection = "negative"
+        
+        if wantedDirection == "positive": #Now we have decided and stick to it until the wall is no longer a danger
+            wantedHeading = selfTracking+90%360
+        elif wantedDirection == "negative":
+            wantedHeading = selfTracking-90%360
+
+        return wantedDirection, wantedHeading
+    except:
+        e = sys.exc_info()
+        print ("ERROR in function CheckCrash: ", e)
 # Adjust the course if we want to head into a wall
 def AdjustCourse(checkDist, wantedHeading):
     try:
@@ -351,6 +355,8 @@ def CheckWall(dist, direction):
 
 def LinesCross(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
     try: 
+        if (xVel2-xVel1) == 0 or (yVel2-yVel1) == 0:
+            return False
         timeX=(x2-x1)/(xVel2-xVel1)
         timeY=(y2-y1)/(yVel2-yVel1)
         if abs(timeX-timeY) < 2:
