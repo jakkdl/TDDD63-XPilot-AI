@@ -260,52 +260,68 @@ cannonmaxscore : 100.0
 teamsharescore : no
 
 mapData: \multiline: EndOfMapdata
-                               
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  xxxx                                                     xxxx 
+   xx                                                       xx  
+xxxx                                                         xxx
+xxx                                                           xx
+xx                                                             x
+x                                                               
+ 
+ 
+ 
+ 
+ 
+ 
+                              
+ 
+ 
+ 
+                           
                                 
                                 
-                       3                        
+                                                
                                 
-                            4  x       2        
-        1                     xxx               
-                             xxxxx
-                            xxxxxxx
-                           xxxxxxxxx       4    
-                          xxxxxxxxxxx
-                         xxxxxxxxxxxxx
-                        xxxxx     xxxxx         
-                       xxxxxx xxx xxxxxx        
-     3                xxxxxxx xxx xxxxxxx       2
-                     xxxxxxxx xxx xxxxxxxx      
-                      xxxxxxx xxx xxxxxxx       
-                       xxx           xxx        
-                        xxxxxxxxxxxxxxx         
-        1                xxxxxxxxxxxxx
-                          xxxxxxxxxxx      2    
-                           xxxxxxxxx
-                            xxxxxxx
-                             xxxxx
-              3               xxx
-                               x          4     
-                                               
-                                
-                        1               
-                                
-                                
-                                
+                               x                       
+                              xxx                 
+                       3     xxxxx     1              
+                            xxxxxxx                 
+                           xxxxxxxxx            
+                          xxxxxxxxxxx                      
+                         xxxxxxxxxxxxx                    
+                        xxxxxxxxxxxxxxx                      
+                       xxxxx xx x x xxxx                     
+                      xxxxxx xxxx x xxxxx              
+                     xxxxxxx xx x x xxxxxx      
+                      xxxxxx  x x   xxxxx       
+                       xxxxxxxxxxxxxxxxx        
+                        xxxxxxxxxxxxxxx          
+                         xxxxxxxxxxxxx               
+                          xxxxxxxxxxx                     
+                           xxxxxxxxx                  
+                            xxxxxxx               
+                       2     xxxxx     4      
+                              xxx           
+                               x               
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+                                                                
+x                                                               
+xx                                                             x
+xxx                                                           xx
+xxxx                                                         xxx
+  xxx                                                       xxx 
+x xxxx                                                     xxxx 
 EndOfMapdata
