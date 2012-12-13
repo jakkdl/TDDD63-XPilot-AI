@@ -1,29 +1,83 @@
 Technical overview - xpilot AI project, group 28
 
-The approach we chose early on was to keep it all in one class. We let different modes dictate how the ship is supposed to act, and what it does by default. The modes are decided based on if-loops that determine what is going on in the game. 
+Introduction
+The approach we chose early on was to keep it all in one class. We let different modes dictate how the ship is supposed to act, and what it does by default. The states are decided based on if-loops that determine what is going on in the game. 
 
-All the functions can be called and accessed from any mode, depending on what is needed. Our reasoning for this is to allow for easier modification throughout (and possibly after) the project, along with making it easier to read. In its current form it's easy to go through, see what functions are called and used, and what they are used for. Splitting the program up into classes makes it harder to get a complete view of what is going on, and also means that the two classes may require the same function or identical variables at the same time. Therefor we feel that our approach is both more efficient and easier to work with. 
+All the functions can be called and accessed from any mode, depending on what is needed. Our reasoning for this is to allow for easier modification throughout (and possibly after) the project, along with making it easier to read. In its current form it's easy to go through, see what functions are called and used, and what they are used for. Splitting the program up into classes makes it harder to get a complete view of what is going on, and also means that the two classes may require the same function or identical variables at the same time. Therefor we feel that our approach is both more efficient and easier to work with, considering the size of the program.
 
-The actions of the ship are controlled by different modes that kick in depending on what is happening. Init mode kicks in when the ship spawns. After three ticks ready mode kicks in. This is because a lot of functions get very strange readings prior to that point. Ready mode quickly reads what is going on around the ship, and determines the best cause of action. If there are no hostile ships nearby, it finds a suitable target and starts hunting it.
+The tick function is where it all happens. Everything inside of the function is done every tick. Some of it is limited to certain modes, such as finding the right angle to fire a shot at an enemy. Other things are carried out always, for example scanning for incoming bullets, and checking for walls.
 
-Movement mode constantly scans for incoming shots, walls, and ships in range to fire at. 
+All global variables, or variables that need to remain set between different ticks are contained in the self object.
 
-If an incoming shot is detected, dodge mode is activated. It uses the dodge function to determine how much dodging is needed, and looks for more incoming shots, and if everything is safe it goes into the next appropriate mode.
+The first that is checked in each tick is whether we have died, and contains all variables that need to be reset upon death.
 
-
-
-The movement function takes an enemy ship's radar coordinates and uses that as target destination, making the ship follow it's target. Once close enough to engage in combat, it will go into shooting mode. If a hostile shot gets close enough and is in danger of hitting, it will go into dodge mode.
-
-The shooting / aiming functions are based on trigonomtry and some vector math. Once a target is in range (visible on the screen), if the conditions are right (no incoming hostile fire, no walls in between, etc) the plane will go into shooting mode. It uses the screen coordinates and velocity of the enemy ship to calculate a good direction to fire, in order to maximize chances to hit, rather than just firing at the current location of the enemy. 
-
-The dodge function has been rewritten dozens of times by now. At this point the end product is based entirely on linear equations and trigonometry. At first we attempted to use snippets of code from elsewhere and find a working way, which we did, but far from satisfactory. As we did not completely understand the math behind it, it was near impossible to get it tuned. Now it is based entirely on math we understand, and although far bulkier than the initial versions, it is easier to fine tune and optimize. 
-
-It loops through every shot ID from 0 to 99 within a radius of 200 units from the ship and tests the danger of all shots that are hostile (have a danger rating above -1). It calculates a linear equation for the shot trajectory and compares it with the current linear equation of the ship. If the two lines cross and, the shot and the ship are estimated to cross it at approximately the same time, it kicks in dodge mode. Dodge mode makes it change course slightly, and test for continued danger. If it's still in danger of getting hit it will keep changing the course until it determines that the danger is over, at which point it goes back to ready mode to determine what the best course of action would be. 
-
-The wall finder and wall evasion is largely a modification and extension of the wall finder we got in one of the examples. Essentially it scans straight ahead for walls, and if it finds one it turns 180 degress, and thrusts to avoid hitting, then goes back into ready mode and on to whatever it was doing prior to the wall becoming an obstacle.
+All sensor readings are then assigned to appropriate variables, to optimize with as few calls to the API as possible, and to make the code readable. The only other sensor readings are in the Danger() function, for detecting multiple bullets.
 
 
+Danger Detecting
+At every tick we override the current state if we detect danger.
+
+CheckWall() is called to check if the tracking is in the direction of a wall, and if so change state to turn.
+
+Danger() is called to check if we are close to being hit, and change state to dodge.
+
+The state machine
+The actions of the ship are controlled by different states that depend on the environment.
+
+Init is the initial state. It's sole purpose is to avoid strange readings that appear directly when spawning. After two ticks it will change state to ready.
+
+Move
+Changes state to shoot if we are close to an enemy.
+Shoots constantly; cause it's a huge disadvantage if we only shoot when close to the enemy. At final.xp you can't get hit by your own bullets, this might have to be adjusted on other maps so we don't fly straight into our own bullets.
+Turns in the direction of the enemy, after adjusting for walls in the way.
+Thrusts if we're going too slow, and if we're roughly in the right direction.
+
+Dodge detects from which direction the opposing shot is incoming and turns away from it if needed. Changes state to thrust for two ticks.
+
+Turn turn towards the wanted heading. When close enough changes state to thrust for 5 ticks.
+
+Thrust thrusts for as many ticks as have been specified.
+
+Shoot turn towards the angle specified by Shoot() and shoots. Changes state to move if there are no nearby enemies.
 
 
 
-By: Magnus Nielsen, John Litborn, Christoffer Karlborg
+
+The functions
+This is a brief description of all functions used in the program. Major functions are called by the different states, and minor functions are called by other functions.
+
+AdjustCourse
+    Adjusts the course if there is a wall in the specified heading, would work way better if the API returned a more specified number than an int.
+    Unfortunately can only loop twice as otherwise the game suffers heavy fps drops if CheckWall is run too many times per tick.
+
+AvoidCrash
+    Adjusts heading if we are crashing
+
+Danger
+    Loops through every shot ID from 0 to 99 within a radius of 200 units from the ship and tests the danger of all bullets that are hostile (have a danger rating above -1). Uses LinesCross to check if we are going to be hit, and returns a "danger rating" if so, otherwise False.
+
+Shoot
+    Calculates in which angle we should shoot to hit a moving enemy using TimeOfImpact(). Returns a heavily randomized angle to have a chance to hit an enemy as they never stay on course.
+
+ClosestEnemy
+    Creates clones of the closest enemy (Not all enemies, as the API doesn't support that), through the edges of the map and calculates which is the closest using Distance(). Returns X and Y coordinates which are used to be able to fly to and shoot people through the edges of the map.
+
+TimeOfImpact
+    Calculates at what time a bullet will hit the enemy. Used in Shoot().
+
+LinesCross
+    Returns whether two lines will cross, with some buffer as ships actually have a size.
+
+CheckWall
+    Wrapper for ai.wallFeeler
+
+TurnToAngle
+    Wrapper to use ai.turn as simple as ai.turnToDeg
+
+FlyTo
+    Returns the angle to a nonmoving enemy, slightly randomized.
+
+Distance
+    Returns the distance between two objects.
+
+Written by Magnus Nielsen and John Litborn
