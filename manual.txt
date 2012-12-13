@@ -23,7 +23,7 @@ further options can be found with
 $ man xpilots
 
 
-The map(s) supported by the AI is [placeholder], which can be found in the maps/ folder.
+The map(s) supported by the AI is final.xp, which can be found in the maps/ folder.
 
 Finally start the bot with python 3
 $ python AI.py
@@ -31,6 +31,7 @@ or
 $ python3 AI.py
 if python3 is not the default.
 
+The name is randomized so you can start as many AI's as you want at the same time.
 
 If you want to start a human player
 $ xpilot
@@ -75,7 +76,7 @@ further options can be found with
 $ man xpilot-ng-server
 
 
-The map(s) supported by the AI is [placeholder], which can be found in the maps/ folder.
+The map(s) supported by the AI is final.xp, which can be found in the maps/ folder.
 
 Finally start the bot with python 3
 $ python AI.py
@@ -83,6 +84,7 @@ or
 $ python3 AI.py
 if python3 is not the default.
 
+The name is randomized so you can start as many AI's as you want at the same time.
 
 If you want to start a human player
 $ xpilot-ng-x11
