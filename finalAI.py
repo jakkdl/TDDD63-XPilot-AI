@@ -385,4 +385,4 @@ name = random.randint(1, 999999)
 
 # The command line arguments to xpilot can be given in the list in the second argument
 # 
-ai.start(AI_loop,[])#"-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
+ai.start(AI_loop,["-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
