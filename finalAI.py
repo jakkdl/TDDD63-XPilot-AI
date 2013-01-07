@@ -4,6 +4,8 @@ import random
 import sys
 import math
 import time ###TODO: remove this when done testing
+import Queue
+import threading
 
 from optparse import OptionParser
 
@@ -38,11 +40,14 @@ class myai:
             #
             if not ai.selfAlive():
                 self.count = 0
-                self.mode = "init"
+                self.mode = "move"
                 self.wantedDirection=""
                 return
 
             self.count += 1
+
+            if self.count < 2:
+                return
 
             #
             # Constants
@@ -129,7 +134,7 @@ class myai:
 
         try:
 
-            print(self.count, self.mode)
+            #print(self.count, self.mode)
 
                                 
 
@@ -149,12 +154,7 @@ class myai:
             # Start of state machine part
             #
 #################################################
-            start=time.time()
-            if self.count == 2 and self.mode != "thrust":
-                self.mode = "move"
-
-#################################################
-            elif self.mode == "wait":
+            if self.mode == "wait":
                 thrust=False ###TODO: For some reason this doesn't go through, after killing an enemy it thrusts like crazy. Bug in API?
                 ai.setPower(5)
                 if enemyExists:
@@ -188,6 +188,7 @@ class myai:
             elif self.mode == "dodge": ##TODO: rewrite
                 incAngle=Danger(selfX, selfY, selfVelX, selfVelY)
                 if selfTracking == None:
+                    self.mode="move"
                     return
                 if ai.angleDiff(int(incAngle), int(selfTracking+180)) < 5: ##TODO: Works really bad
                     #print("Changing angle not to charge into shot")
@@ -232,7 +233,7 @@ class myai:
                 self.wantedHeading=0
                 if enemyRadarDistance > shootDistance:
                     self.mode = "move"
-	if closestShip == -1:
+                if closestShip == -1:
                     self.wantedHeading=FlyTo(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
                 else:
                     self.wantedHeading=Shoot(closestShip, selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, enemyTracking, bulletVel)
@@ -250,10 +251,6 @@ class myai:
                 ai.setPower(8)
                 thrust=True
             #print(thrust)
-            timeTaken=(time.time() - start)
-            if timeTaken > 0.01:
-                #print(self.count, self.mode, timeTaken)
-                pass
             if thrust:
                 ai.thrust(0)
                 ai.thrust(1)
@@ -269,32 +266,59 @@ class myai:
             print ("ERROR in statemachine: ", e)
 
 # Adjust the course if we want to head into a wall
-def AdjustCourse(checkDist, wantedHeading):
-    try:
-        i=0
-        degreeChange=20
-        distCurrent=CheckWall(checkDist, wantedHeading)
-        while distCurrent and i < 4:
-            distPositive=CheckWall(checkDist, wantedHeading+degreeChange)
-            distNegative=CheckWall(checkDist, wantedHeading-degreeChange)
-            lastOperation="plus"
-            if distPositive > distNegative or distPositive == False:
-                wantedHeading += degreeChange
-                distCurrent=distPositive
-                lastOperation="plus"
-            elif distPositive < distNegative or distPositive == False:
-                wantedHeading -= degreeChange
-                distCurrent=distNegative
-                lastOperation="minus"
-            elif lastOperation=="plus":
-                wantedHeading += degreeChange
-            elif lastOperation=="minus":
-                wantedHeading -= degreeChange
-            i+=1
-        return wantedHeading
-    except:
-        e = sys.exc_info()
-        print ("ERROR in function AdjustCourse: ", e)
+#def AdjustCourse(checkDist, direction):
+#    try:
+#        start=time.time()
+#        minDist=10000000000000000 ##Arbitrarily high number, again!
+#        checkList=(0, 15, -15, 45, -45, 90, -90, 180)
+#        for degreeChange in checkList:
+#            dist=CheckWall(checkDist, direction+degreeChange)
+#            if dist==False:
+#                print(time.time() - start)
+#                return direction+degreeChange
+#            if dist < minDist:
+#                minDist=dist
+#                minDistDegree=direction+degreeChange
+#        print(time.time() - start)
+#        return minDistDegree
+#            
+#    except:
+#        e = sys.exc_info()
+#        print ("ERROR in function AdjustCourse: ", e)
+
+class ThreadAdjustCourse(threading.Thread):
+###threaded Course Adjusting
+    def __init__(self, queue):
+        threading.Thread.__init__(self)
+        self.queue = queue
+
+    def run(self):
+        while True:
+             #grabs host from queue
+             direction = self.queue.get()
+             print(direction)
+
+             #signals to queue job is done
+             self.queue.task_done()
+
+def AdjustCourse():
+    checkList=(0, 15, -15, 45, -45, 90, -90, 180)
+    queue = Queue.Queue()
+    
+    #spawn a pool of threads, and pass them queue instance
+    for i in range(8):
+        t = ThreadAdjustCourse(queue)
+        t.setDaemon(True)
+        t.start()
+
+        #populate queue with data
+        for degree in checkList:
+            queue.put(t)
+
+    #wait on the queue until everything has been processed
+    queue.join()
+
+    
 
 # Adjusts heading if we are crashing
 def AvoidCrash(checkDist, selfTracking, wantedDirection ):
