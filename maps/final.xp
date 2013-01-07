@@ -5,7 +5,7 @@ mapheight : 64
 mapname : Final
 limitedlives : no
 worldlives : 0
-selfimmunity : no
+selfimmunity : yes
 gravity : 0.0
 gravityangle : 90
 gravitypoint : 0,0
