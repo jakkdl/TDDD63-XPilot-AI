@@ -122,7 +122,7 @@ class myai:
 #            enemyradarY=closestEnemyRadar[1]
             enemyRadarDistance=Distance(selfRadarX, selfRadarY, enemyRadarX, enemyRadarY)
             if not enemyExists:
-                enemyRadarDistance=99999 #arbitrarily high number
+                enemyRadarDistance=sys.maxsize #arbitrarily high number
             
 
             print(self.count, self.mode)
@@ -231,7 +231,7 @@ class myai:
                 if closestShip == -1:
                     self.wantedHeading=FlyTo(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
                 else:
-                    self.wantedHeading=Shoot(closestShip, selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, enemyTracking, bulletVel)
+                    self.wantedHeading=Shoot(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, bulletVel)
 
 
                 if CheckWall(enemyRadarDistance*radarToScreen, self.wantedHeading): ##Check if there's a wall in the way
@@ -245,7 +245,9 @@ class myai:
                 ##Counteract recoil
                 ai.setPower(8)
                 thrust=True
-            #print(thrust)
+
+#################################################
+
             timeTaken=(time.time() - start)
             if timeTaken > 0.01:
                 #print(self.count, self.mode, timeTaken)
@@ -270,11 +272,11 @@ def AdjustCourse(checkDist, wantedHeading):
     while distCurrent and i < 4:
         distPositive=CheckWall(checkDist, wantedHeading+degreeChange)
         distNegative=CheckWall(checkDist, wantedHeading-degreeChange)
-        lastOperation="plus"
+        lastOperation="plus" ##TODO: Use enums/ints, is faster
         if distPositive > distNegative or distPositive == False:
             wantedHeading += degreeChange
             distCurrent=distPositive
-            lastOperation="plus"
+            lastOperation="plus" ##TODO: already is plus?? take a look at it
         elif distPositive < distNegative or distPositive == False:
             wantedHeading -= degreeChange
             distCurrent=distNegative
@@ -316,18 +318,14 @@ def Danger(selfX, selfY, selfVelX, selfVelY):
             bulletVelX = bulletVel*math.cos(bulletTrack)
             bulletVelY = bulletVel*math.sin(bulletTrack)
 
-            linesCross=LinesCross(selfX, selfY, selfVelX, selfVelY, bulletX, bulletY, bulletVelX, bulletVelY)
+            objectsCollide=ObjectsCollide(selfX, selfY, selfVelX, selfVelY, bulletX, bulletY, bulletVelX, bulletVelY)
 
-            if linesCross==False:
-                return False
-            else:
+            if objectsCollide:
                 return math.atan2(bulletX-selfX, bulletY-selfY)
 
-#Calculates where to shoot to hit a moving enemy, and adds some spread cause in reality the enemy will never stay on it's course.
-def Shoot(id, selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, enemyTracking, bulletVel):
-    if id == -1 or enemyTracking == None:
-        return False
-    
+#Calculates where to shoot to hit a moving enemy, and adds some spread cause in
+#reality the enemy will never stay on his course.
+def Shoot(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, bulletVel):
     relativeX=enemyX-selfX
     relativeY=enemyY-selfY
     relativeVelX=enemyVelX-selfVelX
@@ -350,26 +348,31 @@ def CounteractTracking (heading, tracking):
     length=math.sqrt((resultMatrix[0]**2+resultMatrix[1]**2))
     if length==0:
         return heading
-    resultMatrix[0]/=length
+    resultMatrix[0]/=length   ##making the length of the vector 1
     resultMatrix[1]/=length
-    a=math.acos(resultMatrix[0])
-    b=-a
-    c=math.asin(resultMatrix[1])
-    d=c+math.pi/2
 
-    for x in a,b:
-        for y in c,d:
-            if abs(x-y)<0.01:
-                if abs(a-c)>0.01 and abs(a-d)>0.01 and abs(b-c)>0.01:
-                    print(a,b,c,d)
+    # Two degrees (0<degree<2(pi) ) can have the same X value (x1, x2), and two
+    # degrees can have the same Y value (y1, y2). We therefore have to test all
+    # of them.
+    x1 = math.acos(resultMatrix[0])
+    x2 = -x1
+    y1 = math.asin(resultMatrix[1])
+    y2 = y1 + math.pi / 2
+
+    for x in x1,x2:
+        for y in y1,y2:
+            if abs(x-y)<0.01: #Is essentially a x==y, but this is used instead
+                              #because decimals seems to be lost or so.
+                if abs(x1-y1)>0.01 and abs(x1-y2)>0.01 and abs(x2-y1)>0.01: ####debugging
+                    print(x1, x2, y1, y2)
                 return x*180/math.pi ## radians->degrees
 
     #print(heading, tracking, a,b,c,d,"fail") ##Debugging
     return heading*180/math.pi
 
-#Creates clones of the closest enemy so we can track him through the edges of the map
+#Creates mirror images of the enemy so we can track him through the edges of the map
 def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
-    minDistance=1000000000000000000000 #arbitrarily high number
+    minDistance=sys.maxsize #arbitrarily high number
     for i in range(-1, 2):
         for j in range(-1, 2):
             x=enemyX+mapConstant*i
@@ -381,8 +384,11 @@ def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
                 minDistance=distance
     return (minX, minY)
 
-#Returns the time when we will hit a moving target, for further calculations. Used by Shoot()
-def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+#Returns the time when we will hit a moving target, for further calculations.
+#Used by Shoot()
+def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
+#inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+#I kind of have no clue what I am doing here
     a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
     b=relativeX*targetSpeedX+relativeY*targetSpeedY
     c=relativeX*relativeX+relativeY*relativeY
@@ -396,7 +402,7 @@ def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
     return time
 
 #Returns whether two lines will cross, used by Danger()
-def LinesCross(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
+def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
     if (xVel2-xVel1) == 0 or (yVel2-yVel1) == 0:
         return False
     timeX=(x2-x1)/(xVel2-xVel1)
@@ -418,7 +424,8 @@ def CheckWall(dist, direction):
 
 #Wrapper to make use ai.turn as simple as ai.turnToDeg.
 def TurnToAngle(currentDegree, targetDegree):
-    ai.turn(ai.angleDiff(int(currentDegree), int(targetDegree))) #targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
+    ai.turn(ai.angleDiff(int(currentDegree), int(targetDegree)))
+        #targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
     return
 
 #Returns the angle to turn to, used in Move
