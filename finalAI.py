@@ -50,9 +50,9 @@ class myai:
             #
             # Constants
             #
-            ai.setTurnSpeed(32)
+            ai.setTurnSpeed(48)
             bulletVel = 21
-            shootDistance = 50
+            shootDistance = 200
             mapSize = 2240 ##Assumes it's a square
             radarSize = 256 ##Same on all maps
             radarToScreen = mapSize/radarSize
