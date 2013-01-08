@@ -322,6 +322,7 @@ def Danger(selfX, selfY, selfVelX, selfVelY):
 
             if objectsCollide:
                 return math.atan2(bulletX-selfX, bulletY-selfY)
+    return False
 
 #Calculates where to shoot to hit a moving enemy, and adds some spread cause in
 #reality the enemy will never stay on his course.
