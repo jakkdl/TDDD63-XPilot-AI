@@ -4,6 +4,7 @@ import random
 import sys
 import math
 import time ###TODO: remove this when done testing
+import traceback
 
 from optparse import OptionParser
 
@@ -123,11 +124,6 @@ class myai:
             if not enemyExists:
                 enemyRadarDistance=99999 #arbitrarily high number
             
-        except:
-            e = sys.exc_info()
-            print ("ERROR in Sensor readings: ", e)
-
-        try:
 
             print(self.count, self.mode)
 
@@ -232,7 +228,7 @@ class myai:
                 self.wantedHeading=0
                 if enemyRadarDistance > shootDistance:
                     self.mode = "move"
-	if closestShip == -1:
+                if closestShip == -1:
                     self.wantedHeading=FlyTo(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
                 else:
                     self.wantedHeading=Shoot(closestShip, selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, enemyTracking, bulletVel)
@@ -266,195 +262,161 @@ class myai:
             #
         except:
             e = sys.exc_info()
-            print ("ERROR in statemachine: ", e)
+            print("ERROR:", e[0], ";", e[1], ";", traceback.extract_tb(e[2]))
 
 # Adjust the course if we want to head into a wall
 def AdjustCourse(checkDist, wantedHeading):
-    try:
-        i=0
-        degreeChange=20
-        distCurrent=CheckWall(checkDist, wantedHeading)
-        while distCurrent and i < 4:
-            distPositive=CheckWall(checkDist, wantedHeading+degreeChange)
-            distNegative=CheckWall(checkDist, wantedHeading-degreeChange)
+    i=0
+    degreeChange=20
+    distCurrent=CheckWall(checkDist, wantedHeading)
+    while distCurrent and i < 4:
+        distPositive=CheckWall(checkDist, wantedHeading+degreeChange)
+        distNegative=CheckWall(checkDist, wantedHeading-degreeChange)
+        lastOperation="plus"
+        if distPositive > distNegative or distPositive == False:
+            wantedHeading += degreeChange
+            distCurrent=distPositive
             lastOperation="plus"
-            if distPositive > distNegative or distPositive == False:
-                wantedHeading += degreeChange
-                distCurrent=distPositive
-                lastOperation="plus"
-            elif distPositive < distNegative or distPositive == False:
-                wantedHeading -= degreeChange
-                distCurrent=distNegative
-                lastOperation="minus"
-            elif lastOperation=="plus":
-                wantedHeading += degreeChange
-            elif lastOperation=="minus":
-                wantedHeading -= degreeChange
-            i+=1
-        return wantedHeading
-    except:
-        e = sys.exc_info()
-        print ("ERROR in function AdjustCourse: ", e)
+        elif distPositive < distNegative or distPositive == False:
+            wantedHeading -= degreeChange
+            distCurrent=distNegative
+            lastOperation="minus"
+        elif lastOperation=="plus":
+            wantedHeading += degreeChange
+        elif lastOperation=="minus":
+            wantedHeading -= degreeChange
+        i+=1
+    return wantedHeading
 
 # Adjusts heading if we are crashing
 def AvoidCrash(checkDist, selfTracking, wantedDirection ):
-    try:
-        if wantedDirection == "": #If we haven't yet decided in what direction to turn to avoid the wall, test the different directions and decide
-            distPositive=CheckWall(checkDist, selfTracking+45)
-            distNegative=CheckWall(checkDist, selfTracking-45)
-            if distPositive < distNegative:
-                wantedDirection = "positive"
-            else:
-                wantedDirection = "negative"
-        
-        if wantedDirection == "positive": #Now we have decided and stick to it until the wall is no longer a danger
-            wantedHeading = selfTracking+90%360
-        elif wantedDirection == "negative":
-            wantedHeading = selfTracking-90%360
+    if wantedDirection == "": #If we haven't yet decided in what direction to turn to avoid the wall, test the different directions and decide
+        distPositive=CheckWall(checkDist, selfTracking+45)
+        distNegative=CheckWall(checkDist, selfTracking-45)
+        if distPositive < distNegative:
+            wantedDirection = "positive"
+        else:
+            wantedDirection = "negative"
+    
+    if wantedDirection == "positive": #Now we have decided and stick to it until the wall is no longer a danger
+        wantedHeading = selfTracking+90%360
+    elif wantedDirection == "negative":
+        wantedHeading = selfTracking-90%360
 
-        return wantedDirection, wantedHeading
-    except:
-        e = sys.exc_info()
-        print ("ERROR in function CheckCrash: ", e)
+    return wantedDirection, wantedHeading
 
 #Calculates the Danger of every bullet in the immediate viscinity of the ship, using above functions. If there is no Danger it will return False. If there is Danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
 def Danger(selfX, selfY, selfVelX, selfVelY):
-    try:
-        for i in range(99):
-            if ai.shotAlert(i) == -1:
+    for i in range(99):
+        if ai.shotAlert(i) == -1:
+            return False
+        else:
+            bulletX = ai.shotX(i)
+            bulletY = ai.shotY(i)
+            bulletTrack = ai.shotVelDir(i)
+            bulletVel = ai.shotVel(i)
+            bulletVelX = bulletVel*math.cos(bulletTrack)
+            bulletVelY = bulletVel*math.sin(bulletTrack)
+
+            linesCross=LinesCross(selfX, selfY, selfVelX, selfVelY, bulletX, bulletY, bulletVelX, bulletVelY)
+
+            if linesCross==False:
                 return False
             else:
-                bulletX = ai.shotX(i)
-                bulletY = ai.shotY(i)
-                bulletTrack = ai.shotVelDir(i)
-                bulletVel = ai.shotVel(i)
-                bulletVelX = bulletVel*math.cos(bulletTrack)
-                bulletVelY = bulletVel*math.sin(bulletTrack)
-
-                linesCross=LinesCross(selfX, selfY, selfVelX, selfVelY, bulletX, bulletY, bulletVelX, bulletVelY)
-
-                if linesCross==False:
-                    return False
-                else:
-                    return math.atan2(bulletX-selfX, bulletY-selfY)
-    except:
-        e = sys.exc_info()
-        print ("ERROR in function Danger: ", e)
+                return math.atan2(bulletX-selfX, bulletY-selfY)
 
 #Calculates where to shoot to hit a moving enemy, and adds some spread cause in reality the enemy will never stay on it's course.
 def Shoot(id, selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, enemyTracking, bulletVel):
-    try:
-        if id == -1 or enemyTracking == None:
-            return False
-        
-        relativeX=enemyX-selfX
-        relativeY=enemyY-selfY
-        relativeVelX=enemyVelX-selfVelX
-        relativeVelY=enemyVelY-selfVelY
-        
-        time=TimeOfImpact(relativeX, relativeY, relativeVelX, relativeVelY, bulletVel)
+    if id == -1 or enemyTracking == None:
+        return False
+    
+    relativeX=enemyX-selfX
+    relativeY=enemyY-selfY
+    relativeVelX=enemyVelX-selfVelX
+    relativeVelY=enemyVelY-selfVelY
+    
+    time=TimeOfImpact(relativeX, relativeY, relativeVelX, relativeVelY, bulletVel)
 
-        targetX=enemyX+enemyVelX*time
-        targetY=enemyY+enemyVelY*time
-        targetAngle=ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))
-        return targetAngle+random.randint(-30,30)
-    except:
-        e = sys.exc_info()
-        print ("ERROR in function Shoot: ", e)
+    targetX=enemyX+enemyVelX*time
+    targetY=enemyY+enemyVelY*time
+    targetAngle=ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))
+    return targetAngle+random.randint(-30,30)
 
 #Calculates in which direction to thrust to get to the wanted heading, compensating
 def CounteractTracking (heading, tracking):
-    try:
-        if tracking==None:
-            return heading
-        heading=heading*math.pi/180 ##degrees->radians
-        tracking=tracking*math.pi/180 ##degrees->radians
-        resultMatrix=[math.cos(heading)-math.cos(tracking), math.sin(heading)-math.sin(tracking)]
-        length=math.sqrt((resultMatrix[0]**2+resultMatrix[1]**2))
-        if length==0:
-            return heading
-        resultMatrix[0]/=length
-        resultMatrix[1]/=length
-        a=math.acos(resultMatrix[0])
-        b=-a
-        c=math.asin(resultMatrix[1])
-        d=c+math.pi/2
+    if tracking==None:
+        return heading
+    heading=heading*math.pi/180 ##degrees->radians
+    tracking=tracking*math.pi/180 ##degrees->radians
+    resultMatrix=[math.cos(heading)-math.cos(tracking), math.sin(heading)-math.sin(tracking)]
+    length=math.sqrt((resultMatrix[0]**2+resultMatrix[1]**2))
+    if length==0:
+        return heading
+    resultMatrix[0]/=length
+    resultMatrix[1]/=length
+    a=math.acos(resultMatrix[0])
+    b=-a
+    c=math.asin(resultMatrix[1])
+    d=c+math.pi/2
 
-        for x in a,b:
-            for y in c,d:
-                if abs(x-y)<0.01:
-                    if abs(a-c)>0.01 and abs(a-d)>0.01 and abs(b-c)>0.01:
-                        print(a,b,c,d)
-                    return x*180/math.pi ## radians->degrees
+    for x in a,b:
+        for y in c,d:
+            if abs(x-y)<0.01:
+                if abs(a-c)>0.01 and abs(a-d)>0.01 and abs(b-c)>0.01:
+                    print(a,b,c,d)
+                return x*180/math.pi ## radians->degrees
 
-        #print(heading, tracking, a,b,c,d,"fail") ##Debugging
-        return heading*180/math.pi
-    except:
-        e= sys.exc_info()
-        print ("Error in function CounteractTracking: ", e)
+    #print(heading, tracking, a,b,c,d,"fail") ##Debugging
+    return heading*180/math.pi
 
 #Creates clones of the closest enemy so we can track him through the edges of the map
 def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
-    try:
-        minDistance=1000000000000000000000 #arbitrarily high number
-        for i in range(-1, 2):
-            for j in range(-1, 2):
-                x=enemyX+mapConstant*i
-                y=enemyY+mapConstant*j
-                distance=Distance(selfX, selfY, x, y)
-                if distance < minDistance:
-                    minX=x
-                    minY=y
-                    minDistance=distance
-        return (minX, minY)
-    except:
-        e = sys.exc_info()
-        print ("ERROR in function ClosestEnemy: ", e)
+    minDistance=1000000000000000000000 #arbitrarily high number
+    for i in range(-1, 2):
+        for j in range(-1, 2):
+            x=enemyX+mapConstant*i
+            y=enemyY+mapConstant*j
+            distance=Distance(selfX, selfY, x, y)
+            if distance < minDistance:
+                minX=x
+                minY=y
+                minDistance=distance
+    return (minX, minY)
 
 #Returns the time when we will hit a moving target, for further calculations. Used by Shoot()
 def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed): #inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
-    try:
-        a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
-        b=relativeX*targetSpeedX+relativeY*targetSpeedY
-        c=relativeX*relativeX+relativeY*relativeY
-        d=b*b+a*c
-        if a == 0 or d < 0:
-            return 0
-        time = ( b + math.sqrt(d) ) /a
-        if time < 0:
-            return 0
+    a=bulletSpeed * bulletSpeed - (targetSpeedX*targetSpeedX+targetSpeedY*targetSpeedY)
+    b=relativeX*targetSpeedX+relativeY*targetSpeedY
+    c=relativeX*relativeX+relativeY*relativeY
+    d=b*b+a*c
+    if a == 0 or d < 0:
+        return 0
+    time = ( b + math.sqrt(d) ) /a
+    if time < 0:
+        return 0
 
-        return time
-    except:
-        e = sys.exc_info()
-        print ("ERROR in function TimeOfImpact: ", e)
+    return time
 
 #Returns whether two lines will cross, used by Danger()
 def LinesCross(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
-        if (xVel2-xVel1) == 0 or (yVel2-yVel1) == 0:
-            return False
-        timeX=(x2-x1)/(xVel2-xVel1)
-        timeY=(y2-y1)/(yVel2-yVel1)
-        if abs(timeX-timeY) < 2:
-            return True
-        else:
-            return False
+    if (xVel2-xVel1) == 0 or (yVel2-yVel1) == 0:
+        return False
+    timeX=(x2-x1)/(xVel2-xVel1)
+    timeY=(y2-y1)/(yVel2-yVel1)
+    if abs(timeX-timeY) < 2:
+        return True
+    else:
+        return False
 
 #Returns whether, or how long it is to a wall
 def CheckWall(dist, direction):
-    try:
-        if not dist or not direction:
-            return False
-        distance_to_wall = ai.wallFeeler(int(dist), int(direction), 1, 1)
-        if int(dist) == distance_to_wall:
-            return False
-        else:
-            return distance_to_wall
-    except:
-        e = sys.exc_info()
-        print ("ERROR in function CheckWall: ", e)
-
-    return False
+    if not dist or not direction:
+        return False
+    distance_to_wall = ai.wallFeeler(int(dist), int(direction), 1, 1)
+    if int(dist) == distance_to_wall:
+        return False
+    else:
+        return distance_to_wall
 
 #Wrapper to make use ai.turn as simple as ai.turnToDeg.
 def TurnToAngle(currentDegree, targetDegree):
