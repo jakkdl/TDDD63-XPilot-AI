@@ -57,7 +57,7 @@ class myai:
             radarSize = 256 ##Same on all maps
             radarToScreen = mapSize/radarSize
             thrust = False
-            minimumCheckDist = 150
+            minimumCheckDist = 0
 
             #
             # Read the ships sensors.
@@ -89,22 +89,18 @@ class myai:
                 enemyY = ai.screenEnemyYId(closestShip)
                 enemyVel = ai.enemySpeedId(closestShip)
                 enemyTracking = ai.enemyTrackingRadId(closestShip)
-                if enemyTracking == None:
-                    print("enemyTracking is None")
-                    enemyVelX = 0
-                    enemyVelY = 0
-                elif math.isnan(enemyTracking):
-                    print("enemyTracking is nan")
+
+                if enemyTracking == None or math.isnan(enemyTracking):
                     enemyTracking = None
-                    enemyVelX = 0
-                    enemyVelY = 0
+                    XComponentConst = 0
+                    YComponentConst = 0
                 else:
-                    enemyVelX = enemyVel*math.cos(enemyTracking)
-                    enemyVelY = enemyVel*math.sin(enemyTracking)
+                    XComponentConst=math.cos(enemyTracking)
+                    YComponentConst=math.sin(enemyTracking)
+
+                enemyVelX = enemyVel*XComponentConst
+                enemyVelY = enemyVel*YComponentConst
                 (enemyX, enemyY) = ClosestEnemy(selfX, selfY, enemyX, enemyY, mapSize)
-#                closestEnemyScreen=ClosestEnemy(selfX, selfY, enemyX, enemyY, mapSize)
-#                enemyX=closestEnemyScreen[0]
-#                enemyY=closestEnemyScreen[1]
             #
             # Done reading sensors
             #
@@ -122,9 +118,6 @@ class myai:
             
             # Fix radar readings so we go the shortest way to people when they are on the other side of the edge of the map
             (enemyradarX, enemyRadarY)=ClosestEnemy(selfRadarX, selfRadarY, enemyRadarX, enemyRadarY, radarSize)
-#            closestEnemyRadar=ClosestEnemy(selfRadarX, selfRadarY, enemyRadarX, enemyRadarY, radarSize)
-#            enemyRadarX=closestEnemyRadar[0]
-#            enemyradarY=closestEnemyRadar[1]
             enemyRadarDistance = Distance(selfRadarX, selfRadarY, enemyRadarX, enemyRadarY)
             if not enemyExists:
                 enemyRadarDistance = sys.maxsize #arbitrarily high number
@@ -167,14 +160,17 @@ class myai:
                 #ai.fireShot() ######weeeelll, this was said to be ugly
                 self.wantedHeading = FlyTo(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
 
+                if checkDist < 500:
+                    checkDist = 500
+
                 # Adjust course if we want to head into a wall
                 self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
                 #print(self.wantedHeading, selfTracking, CounteractTracking(self.wantedHeading, selfTracking))
-                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
+                #self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
 
                 TurnToAngle(selfHeading, self.wantedHeading)
                 AdjustPower(enemyRadarDistance)
-                if selfVel < ai.angleDiff(int(selfHeading), int(self.wantedHeading)) < 90:
+                if ai.angleDiff(int(selfHeading), int(self.wantedHeading)) < 90:
                     thrust = True
                 else:
                     thrust = False
@@ -199,16 +195,19 @@ class myai:
                 if crashing == False:
                     self.mode = "move"
                 self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading) ##TODO: Check if this is needed or so
-                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
+                #self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
                 TurnToAngle(selfHeading, self.wantedHeading)
                 
                 #AdjustPower(enemyRadarDistance, distanceToWall) ##TODO: Do some math on trackingVelocity and distance to wall and adjust power accordingly
                 ai.setPower(55)
+                thrust = False
                 
                 if abs(ai.angleDiff (int(selfHeading), int(self.wantedHeading))) < 10:
-                    thrust = True
-                else:
-                    thrust = False
+                    self.ticksLeftToThrust=5
+                    self.mode = "thrust"
+                    #thrust = True
+                #else:
+                    #thrust = False
 
 #################################################
             elif self.mode == "thrust":
@@ -226,6 +225,8 @@ class myai:
 #################################################
             elif self.mode == "shoot":
                 self.wantedHeading = 0
+                if not enemyExists:
+                    self.mode = "wait"
                 if enemyRadarDistance > shootDistance:
                     self.mode = "move"
                 if closestShip == -1:
@@ -417,7 +418,6 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
 def CheckWall(dist, direction):
     if not dist or not direction:
         return False
-    print(dist, direction)
     distance_to_wall = ai.wallFeeler(int(dist), int(direction), 1, 1)
     if int(dist) == distance_to_wall:
         return False
@@ -439,12 +439,12 @@ def Distance(x0, y0, x1, y1):
     return math.sqrt((x1-x0)*(x1-x0)+(y1-y0)*(y1-y0))
 
 def AdjustPower(dist):
-    if dist < 50:
-        ai.setPower(5)
-    elif dist < 100:
+    if dist < 10:
         ai.setPower(20)
-    elif dist < 150:
-        ai.setPower(35)
+    elif dist < 50:
+        ai.setPower(30)
+    elif dist < 100:
+        ai.setPower(40)
     else:
         ai.setPower(55)
     return
