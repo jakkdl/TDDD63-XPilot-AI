@@ -152,7 +152,7 @@ class myai:
 #################################################
             elif self.mode == "wait":
                 thrust=False ###TODO: For some reason this doesn't go through, after killing an enemy it thrusts like crazy. Bug in API?
-                ai.setPower(5)
+                ai.setPower(5) ##And this is the workaround so it doesn't thrust as hard
                 if enemyExists:
                     self.mode = "move"
 #################################################
@@ -251,10 +251,8 @@ class myai:
                 #print(self.count, self.mode, timeTaken)
                 pass
             if thrust:
-                ai.thrust(0)
                 ai.thrust(1)
             else:
-                ai.thrust(1)
                 ai.thrust(0)
 #################################################
             #
