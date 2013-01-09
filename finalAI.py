@@ -21,11 +21,21 @@ class myai:
     #
     # This function is executed when the class instance (the object) is created.
     #
-    def __init__(self):
+    def __init__(self, mapFile):
+
+        random.seed()
+
+        ##constants (they never change)
+        self.options, self.map = ParseMap(mapFile)
+        self.shootDistance = 200
+        self.mapSize = self.options['mapwidth']*35 ##Assumes it's a square
+        self.radarSize = 256 #The same for all maps (No clue what happens if the map isn't a square)
+        self.radarToScreen = self.mapSize / self.radarSize
+
+        ##variables (they will change)
         self.count = 0
         self.wantedHeading = 90
         self.mode = "move"
-        random.seed()
         self.ticksLeftToThrust = 0
         self.wantedDirection = ""
 
@@ -44,20 +54,15 @@ class myai:
 
             self.count += 1
 
-            if self.count < 3: ##Avoid strange readings??
+            if self.count < 3: ##Avoid strange readings
                 return
 
             #
             # Constants
             #
-            ai.setTurnSpeed(48)
-            bulletVel = 21
-            shootDistance = 200
-            mapSize = 2240 ##Assumes it's a square
-            radarSize = 256 ##Same on all maps
-            radarToScreen = mapSize/radarSize
             thrust = False
             minimumCheckDist = 0
+            ai.setTurnSpeed(48)
 
             #
             # Read the ships sensors.
@@ -100,7 +105,8 @@ class myai:
 
                 enemyVelX = enemyVel*XComponentConst
                 enemyVelY = enemyVel*YComponentConst
-                (enemyX, enemyY) = ClosestEnemy(selfX, selfY, enemyX, enemyY, mapSize)
+                if options['edgewrap']:
+                    (enemyX, enemyY) = ClosestEnemy(selfX, selfY, enemyX, enemyY, self.mapSize)
             #
             # Done reading sensors
             #
@@ -116,8 +122,11 @@ class myai:
             if checkDist < minimumCheckDist:
                 checkDist = minimumCheckDist
             
-            # Fix radar readings so we go the shortest way to people when they are on the other side of the edge of the map
-            (enemyradarX, enemyRadarY)=ClosestEnemy(selfRadarX, selfRadarY, enemyRadarX, enemyRadarY, radarSize)
+            # Fix radar readings so we go the shortest way to people when they
+            # are on the other side of the edge of the map
+            if options['edgewrap']:
+                (enemyradarX, enemyRadarY)=ClosestEnemy(selfRadarX, selfRadarY,
+                        enemyRadarX, enemyRadarY, self.radarSize)
             enemyRadarDistance = Distance(selfRadarX, selfRadarY, enemyRadarX, enemyRadarY)
             if not enemyExists:
                 enemyRadarDistance = sys.maxsize #arbitrarily high number
@@ -127,16 +136,20 @@ class myai:
 
                                 
 
-            # At all times we want to check if we are crashing into anything, unless we are already avoiding it
+            # At all times we want to check if we are crashing into anything,
+            # unless we are already avoiding it.
             if self.mode != "thrust" and CheckWall(checkDist, selfTracking):
-                self.wantedDirection, self.wantedHeading = AvoidCrash(checkDist, selfTracking, self.wantedDirection)
+                self.wantedDirection, self.wantedHeading = AvoidCrash(checkDist,
+                            selfTracking, self.wantedDirection)
                 crashing = True
                 self.mode = "turn"
             else:
                 crashing = False
             
             
-            # If we are close to being hit, try and avoid (Seldom works at final.xp's settings, but it's worth a try!)
+            # If we are close to being hit, try and avoid
+            # (Seldom works at final.xp's settings, where bullets are fast and
+            # there are many of them, but it's worth a try!)
             if self.mode != "turn" and Danger(selfX, selfY, selfVelX, selfVelY) != False:
                 self.mode = "dodge"
             #
@@ -144,13 +157,14 @@ class myai:
             #
 #################################################
             if self.mode == "wait":
-                thrust = False ###TODO: For some reason this doesn't go through, after killing an enemy it thrusts like crazy. Bug in API?
+                thrust = False ###TODO: For some reason this doesn't go through,
+                        ##after killing an enemy it thrusts like crazy. Bug in API?
                 ai.setPower(5) ##And this is the workaround so it doesn't thrust as hard
                 if enemyExists:
                     self.mode = "move"
 #################################################
             elif self.mode == "move":
-                if enemyRadarDistance < shootDistance:
+                if enemyRadarDistance < self.shootDistance:
                     self.mode = "shoot"
                     return
                 if not enemyExists:
@@ -180,6 +194,7 @@ class myai:
             elif self.mode == "dodge": ##TODO: rewrite
                 incAngle = Danger(selfX, selfY, selfVelX, selfVelY)
                 if selfTracking == None:
+                    self.mode = "move" ###Dirty fix until it's been rewritten
                     return
                 if ai.angleDiff(int(incAngle), int(selfTracking+180)) < 5: ##TODO: Works really bad
                     #print("Changing angle not to charge into shot")
@@ -194,6 +209,7 @@ class myai:
             elif self.mode == "turn":
                 if crashing == False:
                     self.mode = "move"
+                    return
                 self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading) ##TODO: Check if this is needed or so
                 #self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
                 TurnToAngle(selfHeading, self.wantedHeading)
@@ -205,6 +221,7 @@ class myai:
                 if abs(ai.angleDiff (int(selfHeading), int(self.wantedHeading))) < 10:
                     self.ticksLeftToThrust=5
                     self.mode = "thrust"
+                    return
                     #thrust = True
                 #else:
                     #thrust = False
@@ -226,16 +243,18 @@ class myai:
             elif self.mode == "shoot":
                 self.wantedHeading = 0
                 if not enemyExists:
-                    self.mode = "wait"
-                if enemyRadarDistance > shootDistance:
                     self.mode = "move"
+                    return
+                if enemyRadarDistance > self.shootDistance:
+                    self.mode = "move"
+                    return
                 if closestShip == -1:
                     self.wantedHeading = FlyTo(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
                 else:
-                    self.wantedHeading = Shoot(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, bulletVel)
+                    self.wantedHeading = Shoot(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, self.options['shotspeed'])
 
 
-                if CheckWall(enemyRadarDistance*radarToScreen, self.wantedHeading): ##Check if there's a wall in the way
+                if CheckWall(enemyRadarDistance*self.radarToScreen, self.wantedHeading): ##Check if there's a wall in the way
                     self.wantedHeading = (self.wantedHeading+90)%360
                     self.ticksLeftToThrust = 1
                     self.mode = "thrust"
@@ -449,8 +468,62 @@ def AdjustPower(dist):
         ai.setPower(55)
     return
 
+def ParseMap(mapFile):
+    file = open(mapFile, "r")
+    mapData = []
+    options = {}
+    readingMap = False
+    for line in file:
+        words = str.split(line)
+        if readingMap:
+            if len(words) > 0 and words[0] == "EndOfMapdata":
+                break # Assume that the mapdata comes after the options
+            mapData.append(line)
+        elif len(words) > 0:
+            w = words[0]
+            if w == 'mapwidth':
+                options['mapwidth'] = int(words[2])
+            elif w == 'mapheight':
+                options['mapheight'] = int(words[2])
+            elif w == 'shotspeed':
+                options['shotspeed'] = float(words[2])
+            elif w == 'edgewrap':
+                if words[2] == 'no':
+                    options['edgewrap'] = False
+                elif words[2] == 'yes':
+                    options['edgewrap'] = True
+            elif w == 'mapData:':
+                readingMap = True
+    mapList=ParseMapData(mapData, options)
+    return options, mapList
 
-bot = myai()
+def ParseMapData(mapData, options):
+    mapList=[]
+    lineList=[]
+    for lineIndex in range(len(mapData)-1, 0, -1):
+        line=mapData[lineIndex]
+        for char in line:
+            if char == 'x':
+                lineList.append('True') ##Rocks are represented with True
+            else:
+                lineList.append('False') ##Space (and spawning points) are False
+        mapList.append(lineList)
+        lineList=[]
+    
+    return mapList
+
+
+
+
+
+if len(sys.argv) == 2:
+    mapFile=sys.argv[1]
+else:
+    sys.exit("This AI requires that you supply the map file as the second argument, exiting.")
+    
+
+
+bot = myai(mapFile)
 
 def AI_loop():
     bot.tick()
@@ -460,7 +533,7 @@ AI_loop()
 
 (options, args) = parser.parse_args()
 port = 15345 + options.group
-name = random.randint(1, 999999)
+name = "H-CLASS_MINION-" + str(random.randint(100000, 999999))
 
 
 # The command line arguments to xpilot can be given in the list in the second argument
