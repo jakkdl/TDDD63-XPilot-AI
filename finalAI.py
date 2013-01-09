@@ -360,6 +360,7 @@ def Shoot(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY
     return targetAngle + random.randint(-30,30)
 
 #Calculates in which direction to thrust to get to the wanted heading, compensating
+#for our current tracking
 def CounteractTracking (heading, tracking):
     if tracking == None:
         return heading
