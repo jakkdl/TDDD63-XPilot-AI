@@ -27,7 +27,7 @@ class myai:
 
         ##constants (they never change)
         self.options, self.map = ParseMap(mapFile)
-        self.shootDistance = 200
+        self.shootDistance = 20
         self.mapSize = self.options['mapwidth']*35 ##Assumes it's a square
         self.radarSize = 256 #The same for all maps (No clue what happens if the map isn't a square)
         self.radarToScreen = self.mapSize / self.radarSize
@@ -38,10 +38,12 @@ class myai:
         self.mode = "move"
         self.ticksLeftToThrust = 0
         self.wantedDirection = ""
+        self.turnSpeedSet = False
+        self.maxTime=0
+
 
     def tick(self):
         try:
-
             #
             # If we die then restart the state machine in the state "start"
             # The game will restart the spaceship at the base.
@@ -54,15 +56,17 @@ class myai:
 
             self.count += 1
 
+            if not self.turnSpeedSet:
+                ai.setPower(11110)
+                ai.setTurnSpeed(48)
+                self.turnSpeedSet = True
+
             if self.count < 3: ##Avoid strange readings
                 return
 
-            #
-            # Constants
-            #
+            #### Constants
             thrust = False
             minimumCheckDist = 0
-            ai.setTurnSpeed(48)
 
             #
             # Read the ships sensors.
@@ -105,7 +109,7 @@ class myai:
 
                 enemyVelX = enemyVel*XComponentConst
                 enemyVelY = enemyVel*YComponentConst
-                if options['edgewrap']:
+                if self.options['edgewrap']:
                     (enemyX, enemyY) = ClosestEnemy(selfX, selfY, enemyX, enemyY, self.mapSize)
             #
             # Done reading sensors
@@ -124,7 +128,7 @@ class myai:
             
             # Fix radar readings so we go the shortest way to people when they
             # are on the other side of the edge of the map
-            if options['edgewrap']:
+            if self.options['edgewrap']:
                 (enemyradarX, enemyRadarY)=ClosestEnemy(selfRadarX, selfRadarY,
                         enemyRadarX, enemyRadarY, self.radarSize)
             enemyRadarDistance = Distance(selfRadarX, selfRadarY, enemyRadarX, enemyRadarY)
@@ -132,7 +136,19 @@ class myai:
                 enemyRadarDistance = sys.maxsize #arbitrarily high number
             
 
-            print(self.count, self.mode)
+
+            return
+
+
+
+
+
+            
+            
+            
+            
+            
+            #print(self.count, self.mode)
 
                                 
 
@@ -152,9 +168,9 @@ class myai:
             # there are many of them, but it's worth a try!)
             if self.mode != "turn" and Danger(selfX, selfY, selfVelX, selfVelY) != False:
                 self.mode = "dodge"
-            #
-            # Start of state machine part
-            #
+
+
+            # State machine
 #################################################
             if self.mode == "wait":
                 thrust = False ###TODO: For some reason this doesn't go through,
@@ -406,9 +422,9 @@ def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
                 minDistance = distance
     return (minX, minY)
 
+def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
 #Returns the time when we will hit a moving target, for further calculations.
 #Used by Shoot()
-def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
 #inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 #I kind of have no clue what I am doing here
     a = bulletSpeed * bulletSpeed - (targetSpeedX * targetSpeedX + targetSpeedY * targetSpeedY)
@@ -434,17 +450,147 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
     else:
         return False
 
+####
+#I found out that ai.wallFeeler is much faster when you turn off the two flags
+#the flags control whether it should draw lines on the map on where it is feeling
+#With them turned on wallFeeler can take up to 1/10th of a second, turned off
+#It takes max 5*10^-5 seconds. That makes it faster than the functions below
+#and I keep them simply cause it was a lot of job to write them.
+###
+#def LineLineCollision(a, b):
+##Returns whether line A  with line B
+##all points are tuples of the format (x, y)
+##And lines are tuples of points
+##Taken from http://maryrosecook.com/post/how-to-do-2d-collision-detection
+##I have not tried to understand how this math works
+##Used my WallFeeler
+#    d =  ((b[1][1] - b[0][1]) * (a[1][0] - a[0][0])) - ((b[1][0] - b[0][0]) * (a[1][1] - a[0][1]))
+#    n1 = ((b[1][0] - b[0][0]) * (a[0][1] - b[0][1])) - ((b[1][1] - b[0][1]) * (a[0][0] - b[0][0]))
+#    n2 = ((a[1][0] - a[0][0]) * (a[0][1] - b[0][1])) - ((a[1][1] - a[0][1]) * (a[0][0] - b[0][0]))
+#
+#    if d == 0:
+#        if n1 == 0 and n2 == 0:
+#            return False #Coincident
+#        return False # Parallel
+#
+#    ua = n1 / d
+#    ub = n2 / d
+#
+#    return 0 <= ua <= 1.0 and 0 <= ub <= 1.0
+#
+###This is a rewrite of ai.wallFeeler because it is too slow
+##It takes coordinates from where we want to start looking for a wall
+##As well as a direction and how far. 
+#
+##Returns True if there is a wall in direction, within checkDist, from coordinates on map
+##edgeWrap decides whether the edges of the map should count as walls
+##if returnDistance is true returns the distance to the wall, if no wall returns -1
+#def WallFeeler(x, y, direction, checkDist, map, edgeWrap, returnDistance):
+#    if direction==None:
+#        return False
+#    directionRad = direction * math.pi / 180 ##math.cos() and math.sin() uses radians
+#    startPoint=(x / 35, y / 35)
+#    checkDist /= 35 # pixel to square ratio
+#    endPoint=(math.cos(directionRad) * checkDist + startPoint[0], math.sin(directionRad) * checkDist + startPoint[1])
+#
+#    
+#    ## Which directions are the ship heading in?
+#    # Directions are represented by values 0, 1, 2 and 3 for right, up, left and down respectively
+#    # 0=right, 1=up, 2=left, 3=down
+#    # Shorter than doing 8 if statements
+#    if direction % 90 == 0: ##first we check for 0,90,180,270, where it only have one direction
+#        directions = [direction/90]
+#    else: ##And in all other cases it will have two directions, ( up or down ) and ( left or right )
+#        directions = []
+#        if 0 < direction < 180:
+#            directions.append(1)
+#        else:
+#            directions.append(3)
+#        if 90 < direction < 270:
+#            directions.append(2)
+#        else:
+#            directions.append(0)
+#
+#    distance = CheckMap(startPoint, endPoint, directions, map, checkDist, edgeWrap)
+#
+#    if returnDistance:
+#        if distance == -1:
+#            return -1
+#        else:
+#            return distance*35 #squareToPixel
+#    else:
+#        if distance == -1:
+#            return False
+#        else:
+#            return True
+#
+#
+#def CheckMap(start, end, directions, map, checkDist, edgeWrap):
+##This function will traverse through the same path that the ship will
+##It goes to the next square by checking if the ship's trajectory
+##intersects with one of the four lines around it (though which it checks
+##depends on direction)
+##With the lines drawn in a grid around it
+##                                                                              
+##        -                                                                     
+##       |x|                                                                    
+##        -                                                                     
+## x is the current square
+##TODO: Returns the incorrect distance, need another algorithm (see website)
+##for that
+#    cur=[math.floor(start[0]), math.floor(start[1])]
+#    var=0
+#    while Distance(start[0], start[1], cur[0], cur[1]) < checkDist - 1 and var < checkDist*1.5:
+#        var += 1
+#        if var >= checkDist*3: ##3 > sqrt(2)*2 which should be the max needed ever
+#            print("Error in calculations, breaking out of endless loop")
+#        for direction in directions:
+#            if direction == 0: ##right
+#                b=((1+(cur[0]), (cur[1])),(1+(cur[0]), 1+(cur[1])))
+#                if LineLineCollision((start, end), b):
+#                    cur[0] += 1
+#                    break #We can only go in one direction
+#            elif direction == 1: ##up
+#                b=((cur[0]+1, cur[1]+1),(cur[0], cur[1]+1))
+#                if LineLineCollision((start, end), b):
+#                    cur[1] += 1
+#                    break
+#            elif direction == 2: ##left
+#                b=(((cur[0]), 1+(cur[1])),((cur[0]), (cur[1])))
+#                if LineLineCollision((start, end), b):
+#                    cur[0] -= 1
+#                    break
+#            elif direction == 3: ##down
+#                b=(((cur[0]), (cur[1])),(1+(cur[0]), (cur[1])))
+#                if LineLineCollision((start, end), b):
+#                    cur[1] -= 1
+#                    break
+#            else:
+#                print("ERROR, invalid direction", direction)
+#
+#        #If there is a stone (True) in our current square
+#        #Modulus to wrap around the map edges
+#        if ( ( map[ cur[0] % len(map[0]) ] [ cur[1] % len(map) ] ) or
+#        #If edgreWrap is turned off and current Square is not within the borders of the map
+#                ( ( not edgeWrap ) and ( not 0 < cur[0] < len(map[0]) or not 0 < cur[1] < len(map) ) ) ):
+#            return Distance(start[0], start[1], cur[0], cur[1])
+#
+#    return -1
+        
+
+
+
 #Returns whether, or how long it is to a wall
 def CheckWall(dist, direction):
     if not dist or not direction:
         return False
-    distance_to_wall = ai.wallFeeler(int(dist), int(direction), 1, 1)
+    distance_to_wall = ai.wallFeeler(int(dist), int(direction), 0, 0)
     if int(dist) == distance_to_wall:
         return False
     else:
         return distance_to_wall
 
-#Wrapper to make use ai.turn as simple as ai.turnToDeg.
+#Wrapper to make use of ai.turn as simple as ai.turnToDeg.
 def TurnToAngle(currentDegree, targetDegree):
     ai.turn(ai.angleDiff(int(currentDegree), int(targetDegree)))
         #targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
@@ -455,6 +601,7 @@ def FlyTo(targetX,targetY,selfX,selfY):
     return ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))+random.randint(-10,10)
         
 #returns the distance to the target, used by ClosestEnemy()
+#Uses pythagora
 def Distance(x0, y0, x1, y1):
     return math.sqrt((x1-x0)*(x1-x0)+(y1-y0)*(y1-y0))
 
@@ -495,19 +642,19 @@ def ParseMap(mapFile):
                     options['edgewrap'] = True
             elif w == 'mapData:':
                 readingMap = True
-    mapList=ParseMapData(mapData, options)
+    mapList=ParseMapData(mapData)
     return options, mapList
 
-def ParseMapData(mapData, options):
+def ParseMapData(mapData):
     mapList=[]
     lineList=[]
-    for lineIndex in range(len(mapData)-1, 0, -1):
+    for lineIndex in range(len(mapData)-1, -1, -1):
         line=mapData[lineIndex]
         for char in line:
             if char == 'x':
-                lineList.append('True') ##Rocks are represented with True
-            else:
-                lineList.append('False') ##Space (and spawning points) are False
+                lineList.append(True) ##Rocks are represented with True
+            elif char != '\n': ##Easier than checking for ' ' and numbers (spawnpoints)
+                lineList.append(False) ##Space (and spawning points) are False
         mapList.append(lineList)
         lineList=[]
     
@@ -520,7 +667,7 @@ def ParseMapData(mapData, options):
 if len(sys.argv) == 2:
     mapFile=sys.argv[1]
 else:
-    sys.exit("This AI requires that you supply the map file as the second argument, exiting.")
+    sys.exit("This AI requires that you supply the map file as the second argument, exiting.\nExample usage: $ python finalAI.py maps/final.xp")
     
 
 
