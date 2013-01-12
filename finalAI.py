@@ -315,6 +315,7 @@ class myai:
             e = sys.exc_info()
             print("ERROR:", e[0], ";", e[1], ";", traceback.extract_tb(e[2]))
 
+# TODO desired function? (Adjust in order to achieve what?)
 def AdjustCourse(checkDist, wantedHeading):
 # Adjust the course if we want to head into a wall
     i = 0
@@ -360,8 +361,8 @@ def AvoidCrash(checkDist, selfTracking, wantedDirection ):
 
     return wantedDirection, wantedHeading
 
-# Returns the degree that is safest within distance, if there are several
-# returns the one that is closest to direction
+# Returns an angle as close to 'direction' as possible that isn't in the direction of a wall.
+# if all angles lead to walls, returns the angle that leads to the wall furthest away.
 def NewAvoidCrash(distance, direction):
     if direction == None:
         print("NewAvoidCrash: No direction")
@@ -391,8 +392,9 @@ def NewAvoidCrash(distance, direction):
             diff=abs(ai.angleDiff(int(closestDegree), int(direction)))
     return closestDegree
     
-
-#Calculates the Danger of every bullet in the immediate viscinity of the ship, using above functions. If there is no Danger it will return False. If there is Danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
+# Checks if any bullet on screen is about to hit the ship (takes ship tracking into account)
+# Returns the direction the bullet is coming from (in the case of multiple bullets about to hit, it only returns the direction of one of the bullets)
+# Returns False if no bullets are in collision course.
 def Danger(selfX, selfY, selfVelX, selfVelY):
     for i in range(99):
         if ai.shotAlert(i) == -1:
@@ -411,7 +413,8 @@ def Danger(selfX, selfY, selfVelX, selfVelY):
                 return math.atan2(bulletX-selfX, bulletY-selfY)
     return False
 
-#Calculates where to shoot to hit a moving enemy
+# Returns an angle in order to aim in front of a moving enemy, taking into account its current tracking.
+# Only works when an enemey is on screen because the api won't give the neccesary data otherwise.
 def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, bulletVel):
     relativeX = enemyX - selfX
     relativeY = enemyY - selfY
@@ -425,8 +428,8 @@ def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemy
     targetAngle = ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))
     return targetAngle
 
-#Calculates in which direction to thrust to get to the wanted heading, compensating
-#for our current tracking
+# Calculates in which direction to thrust in order to travel in the desired direction, (compensates
+# for our current tracking)
 def CounteractTracking (heading, tracking):
     if tracking == None:
         print("CounteractTracking: no tracking")
@@ -434,14 +437,14 @@ def CounteractTracking (heading, tracking):
     pi=math.pi
     degToRad=pi/180
     radToDeg=180/pi
-    headingRad = heading*degToRad ##degrees->radians
-    trackingRad = tracking*degToRad ##degrees->radians
+    headingRad = heading*degToRad # degrees->radians
+    trackingRad = tracking*degToRad # degrees->radians
     resultMatrix = [math.cos(headingRad)-math.cos(trackingRad), math.sin(headingRad)-math.sin(trackingRad)]
     length = math.sqrt((resultMatrix[0]**2+resultMatrix[1]**2))
     if length == 0:
         print(heading,tracking,heading,"0 length")
         return heading
-    resultMatrix[0] /= length   ##making the length of the vector 1
+    resultMatrix[0] /= length   # making the length of the vector 1
     resultMatrix[1] /= length
 
     # Two degrees (0<degree<2(pi) ) can have the same X value (x1, x2), and two
@@ -452,8 +455,8 @@ def CounteractTracking (heading, tracking):
     y1 = ( math.asin(resultMatrix[1]) ) % ( 2 * pi)
     y2 = ( pi - y1 ) % ( 2 * pi )
 
-    #print(x1, x2, y1, y2)
-    #print(x1*180/pi, x2*180/pi, y1*180/pi, y2*180/pi)
+    # print(x1, x2, y1, y2)
+    # print(x1*180/pi, x2*180/pi, y1*180/pi, y2*180/pi)
 
     resultRad = False
 
@@ -465,14 +468,14 @@ def CounteractTracking (heading, tracking):
         print(heading,tracking,int(heading), "false result")
         print(x1, x2, y1, y2)
         return heading
-    #print(length)
+    # print(length)
     result=resultRad*radToDeg
     avgResult=MeanDegree(heading, result, length*2)
     print(x1, x2, y1, y2)
     print(heading, tracking, int(avgResult), result)
     return avgResult
 
-#Creates mirror images of the enemy so we can track him through the edges of the map
+# Mirror enemy on the other side of the map in order to track it across the edges.
 def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
     minDistance = sys.maxsize #arbitrarily high number
     for i in range(-1, 2): #-1, 0, 1
@@ -487,10 +490,10 @@ def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
     return (minX, minY)
 
 def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
-#Returns the time when we will hit a moving target, for further calculations.
-#Used by AimScreen()
-#inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
-#I kind of have no clue what I am doing here
+# Returns time until we will hit a moving target
+# Used by AimScreen()
+# inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+# WARNING This might not be correctly implemented.
     a = bulletSpeed * bulletSpeed - (targetSpeedX * targetSpeedX + targetSpeedY * targetSpeedY)
     b = relativeX * targetSpeedX + relativeY * targetSpeedY
     c = relativeX * relativeX + relativeY * relativeY
@@ -503,7 +506,7 @@ def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
 
     return time
 
-#Returns whether two lines will cross, used by Danger()
+# Returns True if two lines will cross, used by Danger()
 def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
     if (xVel2-xVel1) == 0 or (yVel2-yVel1) == 0:
         return False
@@ -642,7 +645,7 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
 #    return -1
         
 
-#Returns whether, or how long it is to a wall
+# Returns distance to a wall, or False if none is found.
 def CheckWall(dist, direction):
     if not dist or not direction:
         return False
@@ -652,18 +655,18 @@ def CheckWall(dist, direction):
     else:
         return distance_to_wall
 
-#Wrapper to make use of ai.turn as simple as ai.turnToDeg.
+# ai.turnToDeg only turns counter-clockwise, this does the same thing except it turns in whichever direction is closer.
 def TurnToAngle(currentDegree, targetDegree):
     ai.turn(ai.angleDiff(int(currentDegree), int(targetDegree)))
-        #targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
+        # targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
     return
 
-#Returns the angle to turn to, used in Move
+# Returns direction to enemy based on radar readings.
 def AimRadar(targetX,targetY,selfX,selfY):
     return ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))+random.randint(-10,10)
         
-#returns the distance to the target, used by ClosestEnemy()
-#Uses pythagora
+# Returns the distance between two coordinates, used by ClosestEnemy()
+# Uses pythagoras theorem
 def Distance(x0, y0, x1, y1):
     return math.sqrt((x1-x0)*(x1-x0)+(y1-y0)*(y1-y0))
 
@@ -714,9 +717,9 @@ def ParseMapData(mapData):
         line=mapData[lineIndex]
         for char in line:
             if char == 'x':
-                lineList.append(True) ##Rocks are represented with True
-            elif char != '\n': ##Easier than checking for ' ' and numbers (spawnpoints)
-                lineList.append(False) ##Space (and spawning points) are False
+                lineList.append(True) # Rocks are represented with True
+            elif char != '\n': # Easier than checking for ' ' and numbers (spawnpoints)
+                lineList.append(False) # Space (and spawning points) are False
         mapList.append(lineList)
         lineList=[]
     
