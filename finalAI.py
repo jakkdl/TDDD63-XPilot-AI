@@ -722,8 +722,8 @@ def ParseMapData(mapData):
     
     return mapList
 
-#Returns the mean degree of a and b, with weight applied to b
-#example: meanDegree(0,90,2)==60
+# Returns the mean degree of a and b, with weight applied to b
+# example: meanDegree(0,90,2)==60
 def MeanDegree(a, b, weight=1):
     mean1=(a+b*weight)/(weight+1)
     mean2=(mean1+180) % 360
@@ -733,7 +733,7 @@ def MeanDegree(a, b, weight=1):
     else:
         return mean2
 
-#Raw copy of ai.angleDiff, except it handles decimals
+# Same as ai.angleDiff, except it handles decimals.
 def AngleDiff(angle1, angle2):
     diff = angle2 - angle1
     while diff < -180:
@@ -742,7 +742,8 @@ def AngleDiff(angle1, angle2):
         diff -= 360
     return diff
 
-###Parse options
+
+# Parse command-line arguments.
 if len(sys.argv) == 2:
     mapFile=sys.argv[1]
     shootDistance=500 #default
