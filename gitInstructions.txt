@@ -1,0 +1,25 @@
+cd /path/to/where/you/want/your/code
+git init
+git remote add origin https://liuxpilot28@bitbucket.org/liuxpilot28/main.git
+git pull -u origin master
+
+
+
+add commit:
+git commit -a -m "Describe changes" #locally
+git push -u origin $branch #$branch is master if you haven't changed.
+
+You can do several commits in a row before pushing if you want.
+
+
+change branch:
+git checkout $branch
+
+create branch (branches from the branch you're currently in):
+git branch $branch
+git checkout $branch
+git push -u origin $branch #don't need to do this until you want it out on the 'nets
+
+delete branch:
+git branch -d
+#Think you need to push it as well, but unsure
