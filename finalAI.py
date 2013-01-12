@@ -21,13 +21,13 @@ class myai:
     #
     # This function is executed when the class instance (the object) is created.
     #
-    def __init__(self, mapFile):
+    def __init__(self, mapFile, shootDistance):
 
         random.seed()
 
         ##constants (they never change)
         self.options, self.map = ParseMap(mapFile)
-        self.shootDistance = 20
+        self.shootDistance = int(shootDistance)
         self.mapSize = self.options['mapwidth']*35 ##Assumes it's a square
         self.radarSize = 256 #The same for all maps (No clue what happens if the map isn't a square)
         self.radarToScreen = self.mapSize / self.radarSize
@@ -39,7 +39,6 @@ class myai:
         self.ticksLeftToThrust = 0
         self.wantedDirection = ""
         self.turnSpeedSet = False
-        self.maxTime=0
 
 
     def tick(self):
@@ -57,12 +56,13 @@ class myai:
             self.count += 1
 
             if not self.turnSpeedSet:
-                ai.setPower(11110)
-                ai.setTurnSpeed(48)
+                ai.setTurnSpeed(64)
                 self.turnSpeedSet = True
 
-            if self.count < 3: ##Avoid strange readings
+            if self.count < 1: ##Avoid strange readings
                 return
+            enemyVel = 0
+
 
             #### Constants
             thrust = False
@@ -98,6 +98,7 @@ class myai:
                 enemyY = ai.screenEnemyYId(closestShip)
                 enemyVel = ai.enemySpeedId(closestShip)
                 enemyTracking = ai.enemyTrackingRadId(closestShip)
+                enemyDistance = ai.enemyDistanceId(closestShip)
 
                 if enemyTracking == None or math.isnan(enemyTracking):
                     enemyTracking = None
@@ -135,22 +136,23 @@ class myai:
             if not enemyExists:
                 enemyRadarDistance = sys.maxsize #arbitrarily high number
             
-
-
-            return
-
-
-
-
-
             
             
-            
-            
-            
-            #print(self.count, self.mode)
+            #####Hattens debugging and testcode
+            #ai.wallFeeler(int(checkDist), int(result), 1, 0)
+            #checkDist = 500
+#            if CheckWall(checkDist, selfTracking):
+#                print("avoid")
+#                result=NewAvoidCrash(checkDist, selfTracking)
+#                ai.wallFeeler(int(checkDist), int(result), 1, 1)
+#                result=CounteractTracking(int(result), int(selfTracking))
+#            else:
+#                result=NewAvoidCrash(checkDist, selfHeading)
+#            
+#            ai.wallFeeler(int(checkDist), int(result), 1, 0)
+#            TurnToAngle(selfHeading, result)
+#            return
 
-                                
 
             # At all times we want to check if we are crashing into anything,
             # unless we are already avoiding it.
@@ -170,6 +172,7 @@ class myai:
                 self.mode = "dodge"
 
 
+            #print(self.count, self.mode)
             # State machine
 #################################################
             if self.mode == "wait":
@@ -188,7 +191,7 @@ class myai:
                     return
 
                 #ai.fireShot() ######weeeelll, this was said to be ugly
-                self.wantedHeading = FlyTo(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
+                self.wantedHeading = AimRadar(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
 
                 if checkDist < 500:
                     checkDist = 500
@@ -207,12 +210,15 @@ class myai:
 
 
 #################################################
-            elif self.mode == "dodge": ##TODO: rewrite
+            ##TODO: rewrite completely, checking for individual shots is kinda bad.
+            ##Ideas: calculate mean mass of shots and avoid, or find "clean areas" and go to
+            ##If possible check the math, sometimes we don't even dodge individual shots
+            elif self.mode == "dodge":
                 incAngle = Danger(selfX, selfY, selfVelX, selfVelY)
                 if selfTracking == None:
                     self.mode = "move" ###Dirty fix until it's been rewritten
                     return
-                if ai.angleDiff(int(incAngle), int(selfTracking+180)) < 5: ##TODO: Works really bad
+                if ai.angleDiff(int(incAngle), int(selfTracking+180)) < 5: ##TODO: Ugly hack
                     #print("Changing angle not to charge into shot")
                     self.wantedHeading = selfTracking+45 ###TODO doesn't work when selfTracking==None
                     self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
@@ -226,11 +232,14 @@ class myai:
                 if crashing == False:
                     self.mode = "move"
                     return
-                self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading) ##TODO: Check if this is needed or so
+                self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
+                ##TODO: Check if this is needed or so //rewriting wall detection /hat
                 #self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
                 TurnToAngle(selfHeading, self.wantedHeading)
                 
-                #AdjustPower(enemyRadarDistance, distanceToWall) ##TODO: Do some math on trackingVelocity and distance to wall and adjust power accordingly
+                #AdjustPower(enemyRadarDistance, distanceToWall)
+                ##TODO: Do some math on trackingVelocity and distance to wall and adjust power accordingly
+                # wait with it until rewriting of wall avoidance
                 ai.setPower(55)
                 thrust = False
                 
@@ -265,29 +274,35 @@ class myai:
                     self.mode = "move"
                     return
                 if closestShip == -1:
-                    self.wantedHeading = FlyTo(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
+                    self.wantedHeading = AimRadar(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
                 else:
-                    self.wantedHeading = Shoot(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, self.options['shotspeed'])
+                    self.wantedHeading = AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, self.options['shotspeed'])
 
 
                 if CheckWall(enemyRadarDistance*self.radarToScreen, self.wantedHeading): ##Check if there's a wall in the way
-                    self.wantedHeading = (self.wantedHeading+90)%360
+                    self.wantedHeading = (self.wantedHeading+90)%360 ##TODO: improve, very simple atm
                     self.ticksLeftToThrust = 1
                     self.mode = "thrust"
                     return
-                
-                TurnToAngle(selfHeading, self.wantedHeading)
+                        ##TODO: approximate enemy velocity when on radar
+                        #So the following can be used even when not on screen
+                        #Use a list with past coordinates, and calculate mean velocity
+                        #Use ai.closestShipId() and ai.closestRadarX/Y()
+                        ##TODO: spread=1000/distance*speed*constant , figure out approximate constant
+                if enemyVel == 0:
+                    amountOfSpread = 0
+                else:
+                    amountOfSpread=math.ceil(1000/enemyRadarDistance)
+                spread=random.randint(-amountOfSpread,amountOfSpread)
+                TurnToAngle(selfHeading, self.wantedHeading+spread)
                 ai.fireShot()
+                
                 ##Counteract recoil
                 ai.setPower(8)
                 thrust = True
 
 #################################################
 
-            #timeTaken = (time.time() - start) ###debugging
-            #if timeTaken > 0.01:
-                #print(self.count, self.mode, timeTaken)
-                #pass
             if thrust:
                 ai.thrust(1)
             else:
@@ -300,19 +315,19 @@ class myai:
             e = sys.exc_info()
             print("ERROR:", e[0], ";", e[1], ";", traceback.extract_tb(e[2]))
 
-# Adjust the course if we want to head into a wall
 def AdjustCourse(checkDist, wantedHeading):
+# Adjust the course if we want to head into a wall
     i = 0
     degreeChange = 20
     distCurrent = CheckWall(checkDist, wantedHeading)
     while distCurrent and i < 4:
         distPositive = CheckWall(checkDist, wantedHeading+degreeChange)
         distNegative = CheckWall(checkDist, wantedHeading-degreeChange)
-        lastOperation = "plus" ##TODO: Use enums/ints, is faster
+        lastOperation = "plus" ##TODO: Use enums/ints, is faster //don't, working on completely rewriting /hat
         if distPositive > distNegative or distPositive == False:
             wantedHeading += degreeChange
             distCurrent = distPositive
-            lastOperation = "plus" ##TODO: already is plus?? take a look at it
+            lastOperation = "plus" ##TODO: already is plus?? take a look at it //don't, working on completely rewriting /hat
         elif distPositive < distNegative or distPositive == False:
             wantedHeading -= degreeChange
             distCurrent = distNegative
@@ -326,13 +341,17 @@ def AdjustCourse(checkDist, wantedHeading):
 
 # Adjusts heading if we are crashing
 def AvoidCrash(checkDist, selfTracking, wantedDirection ):
+    if selfTracking == None:
+        return
     if wantedDirection == "": #If we haven't yet decided in what direction to turn to avoid the wall, test the different directions and decide
         distPositive = CheckWall(checkDist, selfTracking+45)
         distNegative = CheckWall(checkDist, selfTracking-45)
         if distPositive < distNegative:
             wantedDirection = "positive"
+            #wantedHeading = distPositive
         else:
             wantedDirection = "negative"
+            #wantedHeading = distNegative
     
     if wantedDirection == "positive": #Now we have decided and stick to it until the wall is no longer a danger
         wantedHeading = selfTracking+90%360
@@ -340,6 +359,38 @@ def AvoidCrash(checkDist, selfTracking, wantedDirection ):
         wantedHeading = selfTracking-90%360
 
     return wantedDirection, wantedHeading
+
+# Returns the degree that is safest within distance, if there are several
+# returns the one that is closest to direction
+def NewAvoidCrash(distance, direction):
+    if direction == None:
+        print("NewAvoidCrash: No direction")
+        return
+    longestToWall = 0
+    safeExists = False
+    diff = sys.maxsize
+
+    for degree in range(0, 360, 10):
+        checkDirection = (direction+degree)%360
+        result=CheckWall(distance, checkDirection)
+        if result == False:
+            if not safeExists:
+                degrees = []
+                safeExists = True
+            degrees.append(checkDirection)
+        elif not safeExists:
+            if result > longestToWall:
+                longestToWall = result
+                degrees = [ checkDirection ]
+            elif result == longestToWall:
+                degrees.append(checkDirection)
+
+    for degree in degrees:
+        if abs(ai.angleDiff(int(degree), int(direction))) < diff:
+            closestDegree = degree
+            diff=abs(ai.angleDiff(int(closestDegree), int(direction)))
+    return closestDegree
+    
 
 #Calculates the Danger of every bullet in the immediate viscinity of the ship, using above functions. If there is no Danger it will return False. If there is Danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
 def Danger(selfX, selfY, selfVelX, selfVelY):
@@ -360,9 +411,8 @@ def Danger(selfX, selfY, selfVelX, selfVelY):
                 return math.atan2(bulletX-selfX, bulletY-selfY)
     return False
 
-#Calculates where to shoot to hit a moving enemy, and adds some spread cause in
-#reality the enemy will never stay on his course.
-def Shoot(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, bulletVel):
+#Calculates where to shoot to hit a moving enemy
+def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, bulletVel):
     relativeX = enemyX - selfX
     relativeY = enemyY - selfY
     relativeVelX = enemyVelX - selfVelX
@@ -373,18 +423,23 @@ def Shoot(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY
     targetX = enemyX+enemyVelX*time
     targetY = enemyY+enemyVelY*time
     targetAngle = ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))
-    return targetAngle + random.randint(-30,30)
+    return targetAngle
 
 #Calculates in which direction to thrust to get to the wanted heading, compensating
 #for our current tracking
 def CounteractTracking (heading, tracking):
     if tracking == None:
+        print("CounteractTracking: no tracking")
         return heading
-    heading = heading*math.pi/180 ##degrees->radians
-    tracking = tracking*math.pi/180 ##degrees->radians
-    resultMatrix = [math.cos(heading)-math.cos(tracking), math.sin(heading)-math.sin(tracking)]
+    pi=math.pi
+    degToRad=pi/180
+    radToDeg=180/pi
+    headingRad = heading*degToRad ##degrees->radians
+    trackingRad = tracking*degToRad ##degrees->radians
+    resultMatrix = [math.cos(headingRad)-math.cos(trackingRad), math.sin(headingRad)-math.sin(trackingRad)]
     length = math.sqrt((resultMatrix[0]**2+resultMatrix[1]**2))
     if length == 0:
+        print(heading,tracking,heading,"0 length")
         return heading
     resultMatrix[0] /= length   ##making the length of the vector 1
     resultMatrix[1] /= length
@@ -392,21 +447,30 @@ def CounteractTracking (heading, tracking):
     # Two degrees (0<degree<2(pi) ) can have the same X value (x1, x2), and two
     # degrees can have the same Y value (y1, y2). We therefore have to test all
     # of them.
-    x1 = math.acos(resultMatrix[0])
-    x2 = -x1
-    y1 = math.asin(resultMatrix[1])
-    y2 = y1 + math.pi / 2
+    x1 = ( math.acos(resultMatrix[0]) ) % ( 2 * pi )
+    x2 = ( -x1 ) % ( 2 * pi )
+    y1 = ( math.asin(resultMatrix[1]) ) % ( 2 * pi)
+    y2 = ( pi - y1 ) % ( 2 * pi )
+
+    #print(x1, x2, y1, y2)
+    #print(x1*180/pi, x2*180/pi, y1*180/pi, y2*180/pi)
+
+    resultRad = False
 
     for x in x1,x2:
         for y in y1,y2:
-            if abs(x-y)<0.01: #Is essentially a x == y, but this is used instead
-                              #because decimals seems to be lost or so.
-                if abs(x1-y1)>0.01 and abs(x1-y2)>0.01 and abs(x2-y1)>0.01: ####debugging
-                    print(x1, x2, y1, y2)
-                return x*180/math.pi ## radians->degrees
-
-    #print(heading, tracking, a,b,c,d,"fail") ##Debugging
-    return heading*180/math.pi
+            if abs(x-y)<0.01: #x == y, due to python not having infinite decimals
+                resultRad = x ## radians->degrees
+    if resultRad == False:
+        print(heading,tracking,int(heading), "false result")
+        print(x1, x2, y1, y2)
+        return heading
+    #print(length)
+    result=resultRad*radToDeg
+    avgResult=MeanDegree(heading, result, length*2)
+    print(x1, x2, y1, y2)
+    print(heading, tracking, int(avgResult), result)
+    return avgResult
 
 #Creates mirror images of the enemy so we can track him through the edges of the map
 def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
@@ -424,7 +488,7 @@ def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
 
 def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
 #Returns the time when we will hit a moving target, for further calculations.
-#Used by Shoot()
+#Used by AimScreen()
 #inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 #I kind of have no clue what I am doing here
     a = bulletSpeed * bulletSpeed - (targetSpeedX * targetSpeedX + targetSpeedY * targetSpeedY)
@@ -450,7 +514,7 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
     else:
         return False
 
-####
+####Alternative WallFeeler
 #I found out that ai.wallFeeler is much faster when you turn off the two flags
 #the flags control whether it should draw lines on the map on where it is feeling
 #With them turned on wallFeeler can take up to 1/10th of a second, turned off
@@ -536,7 +600,7 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
 ##       |x|                                                                    
 ##        -                                                                     
 ## x is the current square
-##TODO: Returns the incorrect distance, need another algorithm (see website)
+## Returns the incorrect distance, need another algorithm (see website)
 ##for that
 #    cur=[math.floor(start[0]), math.floor(start[1])]
 #    var=0
@@ -578,8 +642,6 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
 #    return -1
         
 
-
-
 #Returns whether, or how long it is to a wall
 def CheckWall(dist, direction):
     if not dist or not direction:
@@ -597,7 +659,7 @@ def TurnToAngle(currentDegree, targetDegree):
     return
 
 #Returns the angle to turn to, used in Move
-def FlyTo(targetX,targetY,selfX,selfY):
+def AimRadar(targetX,targetY,selfX,selfY):
     return ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))+random.randint(-10,10)
         
 #returns the distance to the target, used by ClosestEnemy()
@@ -660,18 +722,38 @@ def ParseMapData(mapData):
     
     return mapList
 
+#Returns the mean degree of a and b, with weight applied to b
+#example: meanDegree(0,90,2)==60
+def MeanDegree(a, b, weight=1):
+    mean1=(a+b*weight)/(weight+1)
+    mean2=(mean1+180) % 360
 
+    if AngleDiff(a, mean1) < AngleDiff(a, mean2):
+        return mean1
+    else:
+        return mean2
 
+#Raw copy of ai.angleDiff, except it handles decimals
+def AngleDiff(angle1, angle2):
+    diff = angle2 - angle1
+    while diff < -180:
+        diff += 360
+    while diff > 180:
+        diff -= 360
+    return diff
 
-
+###Parse options
 if len(sys.argv) == 2:
     mapFile=sys.argv[1]
+    shootDistance=500 #default
+elif len(sys.argv) == 3:
+    mapFile=sys.argv[1]
+    shootDistance=sys.argv[2]
 else:
     sys.exit("This AI requires that you supply the map file as the second argument, exiting.\nExample usage: $ python finalAI.py maps/final.xp")
     
 
-
-bot = myai(mapFile)
+bot = myai(mapFile, shootDistance)
 
 def AI_loop():
     bot.tick()
