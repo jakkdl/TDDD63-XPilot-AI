@@ -141,17 +141,17 @@ class myai:
             #####Hattens debugging and testcode
             #ai.wallFeeler(int(checkDist), int(result), 1, 0)
             #checkDist = 500
-#            if CheckWall(checkDist, selfTracking):
-#                print("avoid")
-#                result=NewAvoidCrash(checkDist, selfTracking)
-#                ai.wallFeeler(int(checkDist), int(result), 1, 1)
-#                result=CounteractTracking(int(result), int(selfTracking))
-#            else:
-#                result=NewAvoidCrash(checkDist, selfHeading)
-#            
-#            ai.wallFeeler(int(checkDist), int(result), 1, 0)
-#            TurnToAngle(selfHeading, result)
-#            return
+            if CheckWall(checkDist, selfTracking):
+                print("avoid")
+                result=NewAvoidCrash(checkDist, selfTracking)
+                ai.wallFeeler(int(checkDist), int(result), 1, 1)
+                result=CounteractTracking(int(result), int(selfTracking))
+            else:
+                result=NewAvoidCrash(checkDist, selfHeading)
+            
+            ai.wallFeeler(int(checkDist), int(result), 1, 0)
+            TurnToAngle(selfHeading, result)
+            return
 
 
             # At all times we want to check if we are crashing into anything,
@@ -468,8 +468,8 @@ def CounteractTracking (heading, tracking):
     #print(length)
     result=resultRad*radToDeg
     avgResult=MeanDegree(heading, result, length*2)
-    print(x1, x2, y1, y2)
-    print(heading, tracking, int(avgResult), result)
+    #print(x1, x2, y1, y2)
+    print(heading, tracking, int(avgResult), result, length)
     return avgResult
 
 #Creates mirror images of the enemy so we can track him through the edges of the map
@@ -642,7 +642,7 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
 #    return -1
         
 
-#Returns whether, or how long it is to a wall
+#Returns distance to wall, or False if none found
 def CheckWall(dist, direction):
     if not dist or not direction:
         return False
