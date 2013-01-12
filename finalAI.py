@@ -723,7 +723,9 @@ def ParseMapData(mapData):
     return mapList
 
 # Returns the mean degree of a and b, with weight applied to b
-# example: meanDegree(0,90,2)==60
+# example: meanDegree(0,90,1) returns 45
+# example: meanDegree(0,90,2) returns 60
+# example: meanDegree(0,90,0) returns 0
 def MeanDegree(a, b, weight=1):
     mean1=(a+b*weight)/(weight+1)
     mean2=(mean1+180) % 360
