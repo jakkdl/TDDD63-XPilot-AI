@@ -138,17 +138,22 @@ class myai:
 
             # At all times we want to check if we are crashing into anything,
             # unless we are already avoiding it.
-            if self.mode != "thrust" and CheckWall(checkDist, selfTracking):
-                #self.wantedDirection, self.wantedHeading = AvoidCrash(checkDist,
-                            #selfTracking, self.wantedDirection)
-                self.wantedHeading = NewAvoidCrash(checkDist, selfTracking)
-                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
-                TurnToAngle(selfHeading, self.wantedHeading)
+            if CheckWall(checkDist, selfTracking):
+                self.mode = "crashing"
                 crashing = True
-                #self.mode = "turn"
-                self.mode = "thrust"
             else:
                 crashing = False
+
+#                #self.wantedDirection, self.wantedHeading = AvoidCrash(checkDist,
+#                            #selfTracking, self.wantedDirection)
+#                self.wantedHeading = NewAvoidCrash(checkDist, selfTracking)
+#                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
+#                TurnToAngle(selfHeading, self.wantedHeading)
+#                crashing = True
+#                #self.mode = "turn"
+#                self.mode = "thrust"
+#            else:
+#                crashing = False
             
             
             # If we are close to being hit, try and avoid
@@ -158,7 +163,7 @@ class myai:
                 self.mode = "dodge"
 
 
-            print(self.count, self.mode)
+            #print(self.count, self.mode)
             # State machine
 #################################################
             if self.mode == "wait":
@@ -177,21 +182,21 @@ class myai:
                     return
 
                 #ai.fireShot() ######weeeelll, this was said to be ugly
-                self.wantedHeading = AimRadar(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
-
-                #if checkDist < 500:
-                    #checkDist = 500
+                aimRadar = AimRadar(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
 
                 # Adjust course if we want to head into a wall
-                self.wantedHeading = NewAvoidCrash(enemyRadarDistance*35, self.wantedHeading)
-                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
+                avoidCrash = NewAvoidCrash(enemyRadarDistance*35, aimRadar, 25)
+                counterTracking = CounteractTracking(avoidCrash, selfTracking)
+                self.wantedHeading = counterTracking
+
+                print(aimRadar, avoidCrash, int(counterTracking))
                 #self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
                 #print(self.wantedHeading, selfTracking, CounteractTracking(self.wantedHeading, selfTracking))
                 #self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
 
                 TurnToAngle(selfHeading, self.wantedHeading)
                 AdjustPower(enemyRadarDistance)
-                if ai.angleDiff(int(selfHeading), int(self.wantedHeading)) < 90:
+                if AngleDiff(selfHeading, self.wantedHeading, True) < 45:
                     thrust = True
                 else:
                     thrust = False
@@ -240,9 +245,16 @@ class myai:
                     #thrust = False
 
 #################################################
+            elif self.mode == "crashing":
+                if not crashing:
+                    self.mode = "move"
+                self.wantedHeading = NewAvoidCrash(checkDist, selfTracking, 45)
+                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
+                TurnToAngle(selfHeading, self.wantedHeading)
+
             elif self.mode == "thrust":
                 
-                if self.ticksLeftToThrust > 0 or crashing:
+                if self.ticksLeftToThrust > 0:
                     ai.setPower(55)
                     #print("THRUUUUSTING")
                     thrust = True
@@ -292,9 +304,11 @@ class myai:
 #################################################
 
             if thrust:
+                pass
                 ai.thrust(1)
             else:
                 ai.thrust(0)
+            ai.wallFeeler(checkDist, int(self.wantedHeading), 1, 1)
 #################################################
             #
             # End of state machine part
@@ -350,40 +364,56 @@ def AvoidCrash(checkDist, selfTracking, wantedDirection ):
 
 # Returns the degree that is safest within distance, if there are several
 # returns the one that is closest to direction
-def NewAvoidCrash(distance, direction):
+def NewAvoidCrash(distance, direction, buffer):
     if direction == None:
         print("NewAvoidCrash: No direction")
         return
     longestToWall = 0
-    safeExists = False
     diff = sys.maxsize
+    degrees = []
 
     #TODO: Check in this order instead (0,1,-1,2,-2,3,-3) /mental not for hat
     #Also, we're done if we find a degree that is safe
-    for degree in range(0, 360, 1): # Steps can be lowered for higher accuracy
-        checkDirection = (direction+degree)%360
-        result=CheckWall(distance, checkDirection)
-        if result == False:
-            if not safeExists:
-                angles = []
-                safeExists = True
-            angles.append(degree)
-        elif not safeExists:
-            if result > longestToWall:
-                longestToWall = result
-                angles = [ degree ]
-            elif result == longestToWall:
-                angles.append(degree)
-
-    #TODO: overshoot a bit, or, write wrapper for CheckWall so we check width of ship
-    if AngleDiff(angles[-1], 0, True) < AngleDiff(angles[0], 0, True):
-        return (angles[-1]+direction-10)%360
+    for degree in range(0, 181, 1): # Steps can be lowered for higher accuracy
+        for mod in 1,-1:
+            checkDirection = (direction+degree)%360
+            result=CheckWall(distance, checkDirection)
+            if result == False:
+                if mod==1:
+                    return (direction+degree+buffer)%360
+                else:
+                    return (direction+degree-buffer)%360
+            elif result > longestToWall:
+                safestDegree = degree
+    print("No safe direction")
+    if degree >= 0:
+        return (direction+degree+buffer)%360
     else:
-        return (angles[0]+direction+10)%360
+        return (direction+degree-buffer)%360
+        
 
 
-
-    return closestDegree
+#
+#            if not safeExists:
+#                angles = []
+#                safeExists = True
+#            angles.append(degree)
+#        elif not safeExists:
+#            if result > longestToWall:
+#                longestToWall = result
+#                angles = [ degree ]
+#            elif result == longestToWall:
+#                angles.append(degree)
+#    print(angles[-1], angles[0])
+#    #TODO: write wrapper for CheckWall so we check the width of the ship
+#    if AngleDiff(angles[-1], 0, True) < AngleDiff(angles[0], 0, True):
+#        return (angles[-1]+direction-10)%360
+#    else:
+#        return (angles[0]+direction+10)%360
+#
+#
+#
+#    return closestDegree
     
 
 #Calculates the Danger of every bullet in the immediate viscinity of the ship, using above functions. If there is no Danger it will return False. If there is Danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
@@ -424,7 +454,6 @@ def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemy
 #for our current tracking
 def CounteractTracking (heading, tracking):
     if tracking == None:
-        print("CounteractTracking: no tracking")
         return heading
     pi=math.pi
     degToRad=pi/180
@@ -644,13 +673,15 @@ def CheckWall(dist, direction):
 
 #Wrapper to make use of ai.turn as simple as ai.turnToDeg.
 def TurnToAngle(currentDegree, targetDegree):
-    ai.turn(ai.angleDiff(int(currentDegree), int(targetDegree)))
+    if currentDegree == None or targetDegree == None:
+        return
+    ai.turn(int(AngleDiff(currentDegree, targetDegree)))
         #targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
     return
 
 #Returns the angle to turn to, used in Move
 def AimRadar(targetX,targetY,selfX,selfY):
-    return ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))+random.randint(-10,10)
+    return (math.atan2(targetY-selfY,targetX-selfX))*180/math.pi
         
 #returns the distance to the target, used by ClosestEnemy()
 #Uses pythagora
@@ -659,7 +690,7 @@ def Distance(x0, y0, x1, y1):
 
 def AdjustPower(dist):
     if dist < 10:
-        ai.setPower(20)
+        ai.setPower(5)
     elif dist < 50:
         ai.setPower(30)
     elif dist < 100:
