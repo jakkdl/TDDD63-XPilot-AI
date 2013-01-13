@@ -77,7 +77,7 @@ class myai:
             selfVelY = ai.selfVelY()
             selfTracking = ai.selfTrackingDeg()
             selfHeading = ai.selfHeadingDeg()
-  
+
             
             #enemy readings
             enemyRadarX = ai.closestRadarX()
@@ -177,12 +177,10 @@ class myai:
                 counterTracking = CounteractTracking(avoidCrash, selfTracking, self.options['friction'])
                 self.wantedHeading = counterTracking
                 TurnToAngle(selfHeading, self.wantedHeading)
-                AdjustPower(enemyRadarDistance, selfVel)
-
-                if AngleDiff(selfHeading, self.wantedHeading, True) < 45:
+                if AdjustPower(enemyRadarDistance, selfVel) or AngleDiff(selfTracking, self.wantedHeading) > 90:
+                #AngleDiff(selfHeading, self.wantedHeading, True) < 45:
                     thrust = True
-                else:
-                    thrust = False
+                    
 
 
 #################################################
@@ -190,6 +188,7 @@ class myai:
             ##Ideas: calculate mean mass of shots and avoid, or find "clean areas" and go to
             ##If possible check the math, sometimes we don't even dodge individual shots
             elif self.mode == "dodge":
+                self.mode = "move"
                 incAngle = Danger(selfX, selfY, selfVelX, selfVelY)
                 if selfTracking == None:
                     self.mode = "move" ###Dirty fix until it's been rewritten
@@ -197,7 +196,7 @@ class myai:
                 if ai.angleDiff(int(incAngle), int(selfTracking+180)) < 5: ##TODO: Ugly hack
                     #print("Changing angle not to charge into shot")
                     self.wantedHeading = selfTracking+45 ###TODO doesn't work when selfTracking==None
-                    self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
+                    #self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
                     TurnToAngle(selfHeading, self.wantedHeading)
 
                 self.ticksLeftToThrust = 2
@@ -211,6 +210,13 @@ class myai:
                 self.wantedHeading = AvoidCrash(checkDist, selfTracking, 45)
                 self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking, self.options['friction'])
                 TurnToAngle(selfHeading, self.wantedHeading)
+                distanceToWall = CheckWall(checkDist, selfTracking)
+                power = selfVel*500/distanceToWall
+                print(int(power))
+                if power > 55:
+                    power = 55
+                ai.setPower(int(power))
+                thrust = True
 #################################################
             elif self.mode == "thrust":
                 
@@ -257,8 +263,9 @@ class myai:
                 ai.fireShot()
                 
                 ##Counteract recoil
-                ai.setPower(8)
-                thrust = True
+                if AngleDiff(selfTracking, self.wantedHeading, True) > 135:
+                    ai.setPower(8)
+                    thrust = True
 
 #################################################
 
@@ -302,7 +309,7 @@ def AvoidCrash(distance, direction, buffer):
 # Checks if any bullet on screen is about to hit the ship (takes ship tracking into account)
 # Returns the direction the bullet is coming from (in the case of multiple bullets about to hit, it only returns the direction of one of the bullets)
 # Returns False if no bullets are in collision course.
-def Danger(selfX, selfY, selfVelX, selfVelY):
+def Danger(selfX, selfY, selfVelX, selfVelY): #TODO: make it use 'correct' velocity, if needed
     for i in range(99):
         if ai.shotAlert(i) == -1:
             return False
@@ -416,6 +423,125 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
         return True
     else:
         return False
+
+# Returns distance to a wall, or False if none is found.
+def CheckWall(dist, direction):
+    if not dist or not direction:
+        return False
+    distance_to_wall = ai.wallFeeler(int(dist), int(direction), 0, 0)
+    if int(dist) == distance_to_wall:
+        return False
+    else:
+        return distance_to_wall
+
+# ai.turnToDeg only turns counter-clockwise, this does the same thing except it turns in whichever direction is closer.
+def TurnToAngle(currentDegree, targetDegree):
+    if currentDegree == None or targetDegree == None:
+        print("Can't turn")
+        return
+    ai.turn(int(AngleDiff(currentDegree, targetDegree)))
+        # targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
+    return
+
+# Returns direction to enemy based on radar readings.
+def AimRadar(targetX,targetY,selfX,selfY):
+    return (math.atan2(targetY-selfY,targetX-selfX))*180/math.pi
+        
+# Returns the distance between two coordinates, used by ClosestEnemy()
+# Uses pythagoras theorem
+def Distance(x0, y0, x1, y1):
+    return math.sqrt((x1-x0)*(x1-x0)+(y1-y0)*(y1-y0))
+
+def AdjustPower(dist, speed):
+#TODO: Include friction and mass in calculations
+    optimalSpeed = dist/15
+    ratio = speed/optimalSpeed
+    diff = optimalSpeed - speed
+
+    if speed + 2 > optimalSpeed and speed != 0:
+        return False
+    elif speed + 4 > optimalSpeed:
+        ai.setPower(20)
+    else:
+        print(optimalSpeed, speed, diff)
+        ai.setPower(55)
+        return True
+        
+
+def ParseMap(mapFile):
+    file = open(mapFile, "r")
+    mapData = []
+    options = {}
+    readingMap = False
+    for line in file:
+        words = str.split(line)
+        if readingMap:
+            if len(words) > 0 and words[0] == "EndOfMapdata":
+                break # Assume that the mapdata comes after the options
+            mapData.append(line)
+        elif len(words) > 0:
+            w = words[0]
+            if w == 'mapwidth':
+                options[ w ] = int(words[2])
+            elif w == 'mapheight':
+                options[ w ] = int(words[2])
+            elif w == 'shotspeed':
+                options[ w ] = float(words[2])
+            elif w == 'friction':
+                options[ w ] = float(words[2])
+            elif w == 'shipmass':
+                options[ w ]  = float(words[2])
+            elif w == 'edgewrap':
+                if words[2] == 'no':
+                    options[ w ] = False
+                elif words[2] == 'yes':
+                    options[ w ] = True
+            elif w == 'mapData:':
+                readingMap = True
+    mapList=ParseMapData(mapData)
+    return options, mapList
+
+def ParseMapData(mapData):
+    mapList=[]
+    lineList=[]
+    for lineIndex in range(len(mapData)-1, -1, -1):
+        line=mapData[lineIndex]
+        for char in line:
+            if char == 'x':
+                lineList.append(True) # Rocks are represented with True
+            elif char != '\n': # Easier than checking for ' ' and numbers (spawnpoints)
+                lineList.append(False) # Space (and spawning points) are False
+        mapList.append(lineList)
+        lineList=[]
+    
+    return mapList
+
+# Returns the mean degree of a and b, with weight applied to b
+# example: meanDegree(0,90,1) returns 45
+# example: meanDegree(0,90,2) returns 60
+# example: meanDegree(0,90,0) returns 0
+def MeanDegree(a, b, weight=1):
+    mean1=(a+b*weight)/(weight+1)
+    mean2=(mean1+180) % 360
+    if AngleDiff(a, mean1, True) < AngleDiff(a, mean2, True):
+        return mean1
+    else:
+        return mean2
+
+# Same as ai.angleDiff, except it handles decimals
+#Returns the absolute value if 'absolute' is set to True
+def AngleDiff(angle1, angle2, absolute=False):
+    if angle1 == None or angle2 == None:
+        return 0
+    diff = angle2 - angle1
+    while diff < -180:
+        diff += 360
+    while diff > 180:
+        diff -= 360
+    if absolute:
+        return abs(diff)
+    else:
+        return diff
 
 ####Alternative WallFeeler
 #I found out that ai.wallFeeler is much faster when you turn off the two flags
@@ -544,119 +670,6 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
 #
 #    return -1
         
-# Returns distance to a wall, or False if none is found.
-def CheckWall(dist, direction):
-    if not dist or not direction:
-        return False
-    distance_to_wall = ai.wallFeeler(int(dist), int(direction), 0, 0)
-    if int(dist) == distance_to_wall:
-        return False
-    else:
-        return distance_to_wall
-
-# ai.turnToDeg only turns counter-clockwise, this does the same thing except it turns in whichever direction is closer.
-def TurnToAngle(currentDegree, targetDegree):
-    if currentDegree == None or targetDegree == None:
-        return
-    ai.turn(int(AngleDiff(currentDegree, targetDegree)))
-        # targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
-    return
-
-# Returns direction to enemy based on radar readings.
-def AimRadar(targetX,targetY,selfX,selfY):
-    return (math.atan2(targetY-selfY,targetX-selfX))*180/math.pi
-        
-# Returns the distance between two coordinates, used by ClosestEnemy()
-# Uses pythagoras theorem
-def Distance(x0, y0, x1, y1):
-    return math.sqrt((x1-x0)*(x1-x0)+(y1-y0)*(y1-y0))
-
-def AdjustPower(dist, speed):
-#TODO: Get sensible values here, also, power shouldn't only depend on ratio.
-    optimalSpeed = dist/1.5
-    ratio = speed/optimalSpeed
-    if ratio > 2: 
-        ai.setPower(5)
-    elif ratio > 1:
-        ai.setPower(10)
-    elif ratio > 0.7:
-        ai.setPower(20)
-    elif ratio > 0.5:
-        ai.setPower(40)
-    else:
-        ai.setPower(55)
-    return
-
-def ParseMap(mapFile):
-    file = open(mapFile, "r")
-    mapData = []
-    options = {}
-    readingMap = False
-    for line in file:
-        words = str.split(line)
-        if readingMap:
-            if len(words) > 0 and words[0] == "EndOfMapdata":
-                break # Assume that the mapdata comes after the options
-            mapData.append(line)
-        elif len(words) > 0:
-            w = words[0]
-            if w == 'mapwidth':
-                options['mapwidth'] = int(words[2])
-            elif w == 'mapheight':
-                options['mapheight'] = int(words[2])
-            elif w == 'shotspeed':
-                options['shotspeed'] = float(words[2])
-            elif w == 'friction':
-                options['friction'] = float(words[2])
-            elif w == 'edgewrap':
-                if words[2] == 'no':
-                    options['edgewrap'] = False
-                elif words[2] == 'yes':
-                    options['edgewrap'] = True
-            elif w == 'mapData:':
-                readingMap = True
-    mapList=ParseMapData(mapData)
-    return options, mapList
-
-def ParseMapData(mapData):
-    mapList=[]
-    lineList=[]
-    for lineIndex in range(len(mapData)-1, -1, -1):
-        line=mapData[lineIndex]
-        for char in line:
-            if char == 'x':
-                lineList.append(True) # Rocks are represented with True
-            elif char != '\n': # Easier than checking for ' ' and numbers (spawnpoints)
-                lineList.append(False) # Space (and spawning points) are False
-        mapList.append(lineList)
-        lineList=[]
-    
-    return mapList
-
-# Returns the mean degree of a and b, with weight applied to b
-# example: meanDegree(0,90,1) returns 45
-# example: meanDegree(0,90,2) returns 60
-# example: meanDegree(0,90,0) returns 0
-def MeanDegree(a, b, weight=1):
-    mean1=(a+b*weight)/(weight+1)
-    mean2=(mean1+180) % 360
-    if AngleDiff(a, mean1, True) < AngleDiff(a, mean2, True):
-        return mean1
-    else:
-        return mean2
-
-# Same as ai.angleDiff, except it handles decimals
-#Returns the absolute value if 'absolute' is set to True
-def AngleDiff(angle1, angle2, absolute=False):
-    diff = angle2 - angle1
-    while diff < -180:
-        diff += 360
-    while diff > 180:
-        diff -= 360
-    if absolute:
-        return abs(diff)
-    else:
-        return diff
 
 
 # Parse command-line arguments.
