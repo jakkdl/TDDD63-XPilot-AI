@@ -34,10 +34,8 @@ class myai:
 
         ##variables (they will change)
         self.count = 0
-        self.wantedHeading = 90
         self.mode = "move"
         self.ticksLeftToThrust = 0
-        self.wantedDirection = ""
         self.turnSpeedSet = False
 
 
@@ -64,7 +62,7 @@ class myai:
 
             #### Constants
             thrust = False
-            minimumCheckDist = 0
+            minimumCheckDist = 30
 
             # Read the ships sensors.
             #
@@ -120,7 +118,7 @@ class myai:
             #
             if math.isnan(selfTracking): #cause nan is a bitch to check for, rather have None
                 selfTracking = None
-            checkDist = int(selfVel*40)
+            checkDist = int(selfVel*20)
             if checkDist < minimumCheckDist:
                 checkDist = minimumCheckDist
             
@@ -129,6 +127,7 @@ class myai:
             if self.options['edgewrap']:
                 (enemyradarX, enemyRadarY)=ClosestEnemy(selfRadarX, selfRadarY,
                         enemyRadarX, enemyRadarY, self.radarSize)
+
             enemyRadarDistance = Distance(selfRadarX, selfRadarY, enemyRadarX, enemyRadarY)
             if not enemyExists:
                 enemyRadarDistance = sys.maxsize #arbitrarily high number
@@ -144,26 +143,16 @@ class myai:
             else:
                 crashing = False
 
-#                #self.wantedDirection, self.wantedHeading = AvoidCrash(checkDist,
-#                            #selfTracking, self.wantedDirection)
-#                self.wantedHeading = NewAvoidCrash(checkDist, selfTracking)
-#                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
-#                TurnToAngle(selfHeading, self.wantedHeading)
-#                crashing = True
-#                #self.mode = "turn"
-#                self.mode = "thrust"
-#            else:
-#                crashing = False
             
             
             # If we are close to being hit, try and avoid
             # (Seldom works at final.xp's settings, where bullets are fast and
             # there are many of them, but it's worth a try!)
-            if self.mode != "turn" and Danger(selfX, selfY, selfVelX, selfVelY) != False:
+            if Danger(selfX, selfY, selfVelX, selfVelY) != False:
                 self.mode = "dodge"
 
 
-            #print(self.count, self.mode)
+            print(self.count, self.mode)
             # State machine
 #################################################
             if self.mode == "wait":
@@ -181,21 +170,15 @@ class myai:
                     self.mode = "wait"
                     return
 
-                #ai.fireShot() ######weeeelll, this was said to be ugly
                 aimRadar = AimRadar(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
 
                 # Adjust course if we want to head into a wall
-                avoidCrash = NewAvoidCrash(enemyRadarDistance*35, aimRadar, 25)
-                counterTracking = CounteractTracking(avoidCrash, selfTracking)
+                avoidCrash = AvoidCrash(enemyRadarDistance*self.radarToScreen, aimRadar, 10)
+                counterTracking = CounteractTracking(avoidCrash, selfTracking, self.options['friction'])
                 self.wantedHeading = counterTracking
-
-                print(aimRadar, avoidCrash, int(counterTracking))
-                #self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
-                #print(self.wantedHeading, selfTracking, CounteractTracking(self.wantedHeading, selfTracking))
-                #self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
-
                 TurnToAngle(selfHeading, self.wantedHeading)
-                AdjustPower(enemyRadarDistance)
+                AdjustPower(enemyRadarDistance, selfVel)
+
                 if AngleDiff(selfHeading, self.wantedHeading, True) < 45:
                     thrust = True
                 else:
@@ -221,42 +204,18 @@ class myai:
                 self.mode = "thrust"
 
 #################################################
-            elif self.mode == "turn":
-                if crashing == False:
-                    self.mode = "move"
-                    return
-                self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
-                ##TODO: Check if this is needed or so //rewriting wall detection /hat
-                #self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
-                TurnToAngle(selfHeading, self.wantedHeading)
-                
-                #AdjustPower(enemyRadarDistance, distanceToWall)
-                ##TODO: Do some math on trackingVelocity and distance to wall and adjust power accordingly
-                # wait with it until rewriting of wall avoidance
-                ai.setPower(55)
-                thrust = False
-                
-                if abs(ai.angleDiff (int(selfHeading), int(self.wantedHeading))) < 10:
-                    self.ticksLeftToThrust=5
-                    self.mode = "thrust"
-                    return
-                    #thrust = True
-                #else:
-                    #thrust = False
-
-#################################################
             elif self.mode == "crashing":
                 if not crashing:
                     self.mode = "move"
-                self.wantedHeading = NewAvoidCrash(checkDist, selfTracking, 45)
-                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking)
+                    return
+                self.wantedHeading = AvoidCrash(checkDist, selfTracking, 45)
+                self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking, self.options['friction'])
                 TurnToAngle(selfHeading, self.wantedHeading)
-
+#################################################
             elif self.mode == "thrust":
                 
                 if self.ticksLeftToThrust > 0:
                     ai.setPower(55)
-                    #print("THRUUUUSTING")
                     thrust = True
                     self.ticksLeftToThrust -= 1
                 else:
@@ -304,118 +263,42 @@ class myai:
 #################################################
 
             if thrust:
-                pass
                 ai.thrust(1)
             else:
                 ai.thrust(0)
-            ai.wallFeeler(checkDist, int(self.wantedHeading), 1, 1)
 #################################################
             #
             # End of state machine part
             #
         except:
             e = sys.exc_info()
-            print("ERROR:", e[0], ";", e[1], ";", traceback.extract_tb(e[2]))
-
-def AdjustCourse(checkDist, wantedHeading):
-# Adjust the course if we want to head into a wall
-    i = 0
-    degreeChange = 20
-    distCurrent = CheckWall(checkDist, wantedHeading)
-    while distCurrent and i < 4:
-        distPositive = CheckWall(checkDist, wantedHeading+degreeChange)
-        distNegative = CheckWall(checkDist, wantedHeading-degreeChange)
-        lastOperation = "plus" ##TODO: Use enums/ints, is faster //don't, working on completely rewriting /hat
-        if distPositive > distNegative or distPositive == False:
-            wantedHeading += degreeChange
-            distCurrent = distPositive
-            lastOperation = "plus" ##TODO: already is plus?? take a look at it //don't, working on completely rewriting /hat
-        elif distPositive < distNegative or distPositive == False:
-            wantedHeading -= degreeChange
-            distCurrent = distNegative
-            lastOperation = "minus"
-        elif lastOperation == "plus":
-            wantedHeading += degreeChange
-        elif lastOperation == "minus":
-            wantedHeading -= degreeChange
-        i += 1
-    return wantedHeading
-
-# Adjusts heading if we are crashing
-def AvoidCrash(checkDist, selfTracking, wantedDirection ):
-    if selfTracking == None:
-        return
-    if wantedDirection == "": #If we haven't yet decided in what direction to turn to avoid the wall, test the different directions and decide
-        distPositive = CheckWall(checkDist, selfTracking+45)
-        distNegative = CheckWall(checkDist, selfTracking-45)
-        if distPositive < distNegative:
-            wantedDirection = "positive"
-            #wantedHeading = distPositive
-        else:
-            wantedDirection = "negative"
-            #wantedHeading = distNegative
-    
-    if wantedDirection == "positive": #Now we have decided and stick to it until the wall is no longer a danger
-        wantedHeading = selfTracking+90%360
-    elif wantedDirection == "negative":
-        wantedHeading = selfTracking-90%360
-
-    return wantedDirection, wantedHeading
+            print("ERROR:", e[0], "\n", e[1], "\n", traceback.extract_tb(e[2]))
 
 # Returns the degree that is safest within distance, if there are several
 # returns the one that is closest to direction
-def NewAvoidCrash(distance, direction, buffer):
+def AvoidCrash(distance, direction, buffer):
     if direction == None:
-        print("NewAvoidCrash: No direction")
         return
     longestToWall = 0
     diff = sys.maxsize
     degrees = []
 
-    #TODO: Check in this order instead (0,1,-1,2,-2,3,-3) /mental not for hat
-    #Also, we're done if we find a degree that is safe
     for degree in range(0, 181, 1): # Steps can be lowered for higher accuracy
         for mod in 1,-1:
             checkDirection = (direction+degree)%360
             result=CheckWall(distance, checkDirection)
             if result == False:
-                if mod==1:
+                if mod == 1:
                     return (direction+degree+buffer)%360
                 else:
                     return (direction+degree-buffer)%360
             elif result > longestToWall:
                 safestDegree = degree
-    print("No safe direction")
     if degree >= 0:
         return (direction+degree+buffer)%360
     else:
         return (direction+degree-buffer)%360
         
-
-
-#
-#            if not safeExists:
-#                angles = []
-#                safeExists = True
-#            angles.append(degree)
-#        elif not safeExists:
-#            if result > longestToWall:
-#                longestToWall = result
-#                angles = [ degree ]
-#            elif result == longestToWall:
-#                angles.append(degree)
-#    print(angles[-1], angles[0])
-#    #TODO: write wrapper for CheckWall so we check the width of the ship
-#    if AngleDiff(angles[-1], 0, True) < AngleDiff(angles[0], 0, True):
-#        return (angles[-1]+direction-10)%360
-#    else:
-#        return (angles[0]+direction+10)%360
-#
-#
-#
-#    return closestDegree
-    
-
 #Calculates the Danger of every bullet in the immediate viscinity of the ship, using above functions. If there is no Danger it will return False. If there is Danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
 def Danger(selfX, selfY, selfVelX, selfVelY):
     for i in range(99):
@@ -452,7 +335,7 @@ def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemy
 
 #Calculates in which direction to thrust to get to the wanted heading, compensating
 #for our current tracking
-def CounteractTracking (heading, tracking):
+def CounteractTracking (heading, tracking, friction):
     if tracking == None:
         return heading
     pi=math.pi
@@ -463,7 +346,6 @@ def CounteractTracking (heading, tracking):
     resultMatrix = [math.cos(headingRad)-math.cos(trackingRad), math.sin(headingRad)-math.sin(trackingRad)]
     length = math.sqrt((resultMatrix[0]**2+resultMatrix[1]**2))
     if length == 0:
-        print(heading,tracking,heading,"no length")
         return heading
     resultMatrix[0] /= length   ##making the length of the vector 1
     resultMatrix[1] /= length
@@ -484,11 +366,10 @@ def CounteractTracking (heading, tracking):
                 resultRad = x ## radians->degrees
 
     if resultRad == None:
-        print(heading,tracking,resultRad, "false result")
-        print(x1, x2, y1, y2)
         return heading
     result=resultRad*radToDeg
-    avgResult=MeanDegree(heading, result, length*1)
+    weight=length*(1-friction*20) #TODO: Adjust constants
+    avgResult=MeanDegree(heading, result, weight)
     return avgResult
 
 #Creates mirror images of the enemy so we can track him through the edges of the map
@@ -688,12 +569,17 @@ def AimRadar(targetX,targetY,selfX,selfY):
 def Distance(x0, y0, x1, y1):
     return math.sqrt((x1-x0)*(x1-x0)+(y1-y0)*(y1-y0))
 
-def AdjustPower(dist):
-    if dist < 10:
+def AdjustPower(dist, speed):
+#TODO: Get sensible values here, also, power shouldn't only depend on ratio.
+    optimalSpeed = dist/1.5
+    ratio = speed/optimalSpeed
+    if ratio > 2: 
         ai.setPower(5)
-    elif dist < 50:
-        ai.setPower(30)
-    elif dist < 100:
+    elif ratio > 1:
+        ai.setPower(10)
+    elif ratio > 0.7:
+        ai.setPower(20)
+    elif ratio > 0.5:
         ai.setPower(40)
     else:
         ai.setPower(55)
@@ -718,6 +604,8 @@ def ParseMap(mapFile):
                 options['mapheight'] = int(words[2])
             elif w == 'shotspeed':
                 options['shotspeed'] = float(words[2])
+            elif w == 'friction':
+                options['friction'] = float(words[2])
             elif w == 'edgewrap':
                 if words[2] == 'no':
                     options['edgewrap'] = False
