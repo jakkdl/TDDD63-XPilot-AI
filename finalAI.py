@@ -282,7 +282,7 @@ def AvoidCrash(distance, direction, buffer):
     longestToWall = 0
     diff = sys.maxsize
     degrees = []
-
+    #TODO: Write wrapper for CheckWall so we check the width of the ship and don't need as much buffer
     for degree in range(0, 181, 1): # Steps can be lowered for higher accuracy
         for mod in 1,-1:
             checkDirection = (direction+degree)%360
@@ -299,7 +299,9 @@ def AvoidCrash(distance, direction, buffer):
     else:
         return (direction+degree-buffer)%360
         
-#Calculates the Danger of every bullet in the immediate viscinity of the ship, using above functions. If there is no Danger it will return False. If there is Danger of being hit, it will return either positive or negative depending on which direction is better to make an evasive manouver. 
+# Checks if any bullet on screen is about to hit the ship (takes ship tracking into account)
+# Returns the direction the bullet is coming from (in the case of multiple bullets about to hit, it only returns the direction of one of the bullets)
+# Returns False if no bullets are in collision course.
 def Danger(selfX, selfY, selfVelX, selfVelY):
     for i in range(99):
         if ai.shotAlert(i) == -1:
@@ -318,7 +320,8 @@ def Danger(selfX, selfY, selfVelX, selfVelY):
                 return math.atan2(bulletX-selfX, bulletY-selfY)
     return False
 
-#Calculates where to shoot to hit a moving enemy
+# Returns an angle in order to aim in front of a moving enemy, taking into account its current tracking.
+# Only works when an enemey is on screen because the api won't give the neccesary data otherwise.
 def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, bulletVel):
 # TODO: Can be improved, aim's a little bad in general. Maybe merge it with AimRadar.
     relativeX = enemyX - selfX
@@ -333,21 +336,21 @@ def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemy
     targetAngle = ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))
     return targetAngle
 
-#Calculates in which direction to thrust to get to the wanted heading, compensating
-#for our current tracking
+# Calculates in which direction to thrust in order to travel in the desired direction, (compensates
+# for our current tracking)
 def CounteractTracking (heading, tracking, friction):
     if tracking == None:
         return heading
     pi=math.pi
     degToRad=pi/180
     radToDeg=180/pi
-    headingRad = heading*degToRad ##degrees->radians
-    trackingRad = tracking*degToRad ##degrees->radians
+    headingRad = heading*degToRad # degrees->radians
+    trackingRad = tracking*degToRad # degrees->radians
     resultMatrix = [math.cos(headingRad)-math.cos(trackingRad), math.sin(headingRad)-math.sin(trackingRad)]
     length = math.sqrt((resultMatrix[0]**2+resultMatrix[1]**2))
     if length == 0:
         return heading
-    resultMatrix[0] /= length   ##making the length of the vector 1
+    resultMatrix[0] /= length   # making the length of the vector 1
     resultMatrix[1] /= length
 
     # Two degrees (0<degree<2(pi) ) can have the same X value (x1, x2), and two
@@ -372,7 +375,7 @@ def CounteractTracking (heading, tracking, friction):
     avgResult=MeanDegree(heading, result, weight)
     return avgResult
 
-#Creates mirror images of the enemy so we can track him through the edges of the map
+# Mirror enemy on the other side of the map in order to track it across the edges.
 def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
     minDistance = sys.maxsize #arbitrarily high number
     for i in range(-1, 2): #-1, 0, 1
@@ -387,10 +390,10 @@ def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
     return (minX, minY)
 
 def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
-#Returns the time when we will hit a moving target, for further calculations.
-#Used by AimScreen()
-#inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
-#I kind of have no clue what I am doing here
+# Returns time until we will hit a moving target
+# Used by AimScreen()
+# inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+# WARNING This might not be correctly implemented.
     a = bulletSpeed * bulletSpeed - (targetSpeedX * targetSpeedX + targetSpeedY * targetSpeedY)
     b = relativeX * targetSpeedX + relativeY * targetSpeedY
     c = relativeX * relativeX + relativeY * relativeY
@@ -403,7 +406,7 @@ def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
 
     return time
 
-#Returns whether two lines will cross, used by Danger()
+# Returns True if two lines will cross, used by Danger()
 def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
     if (xVel2-xVel1) == 0 or (yVel2-yVel1) == 0:
         return False
@@ -541,8 +544,7 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
 #
 #    return -1
         
- 
-#Returns distance to wall, or False if none found
+# Returns distance to a wall, or False if none is found.
 def CheckWall(dist, direction):
     if not dist or not direction:
         return False
@@ -552,20 +554,20 @@ def CheckWall(dist, direction):
     else:
         return distance_to_wall
 
-#Wrapper to make use of ai.turn as simple as ai.turnToDeg.
+# ai.turnToDeg only turns counter-clockwise, this does the same thing except it turns in whichever direction is closer.
 def TurnToAngle(currentDegree, targetDegree):
     if currentDegree == None or targetDegree == None:
         return
     ai.turn(int(AngleDiff(currentDegree, targetDegree)))
-        #targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
+        # targetDegree-currentdegree%360, if < 180: +180, elif >180: -180
     return
 
-#Returns the angle to turn to, used in Move
+# Returns direction to enemy based on radar readings.
 def AimRadar(targetX,targetY,selfX,selfY):
     return (math.atan2(targetY-selfY,targetX-selfX))*180/math.pi
         
-#returns the distance to the target, used by ClosestEnemy()
-#Uses pythagora
+# Returns the distance between two coordinates, used by ClosestEnemy()
+# Uses pythagoras theorem
 def Distance(x0, y0, x1, y1):
     return math.sqrt((x1-x0)*(x1-x0)+(y1-y0)*(y1-y0))
 
@@ -623,16 +625,18 @@ def ParseMapData(mapData):
         line=mapData[lineIndex]
         for char in line:
             if char == 'x':
-                lineList.append(True) ##Rocks are represented with True
-            elif char != '\n': ##Easier than checking for ' ' and numbers (spawnpoints)
-                lineList.append(False) ##Space (and spawning points) are False
+                lineList.append(True) # Rocks are represented with True
+            elif char != '\n': # Easier than checking for ' ' and numbers (spawnpoints)
+                lineList.append(False) # Space (and spawning points) are False
         mapList.append(lineList)
         lineList=[]
     
     return mapList
 
-#Returns the mean degree of a and b, with weight applied to b
-#example: meanDegree(0,90,2)==60
+# Returns the mean degree of a and b, with weight applied to b
+# example: meanDegree(0,90,1) returns 45
+# example: meanDegree(0,90,2) returns 60
+# example: meanDegree(0,90,0) returns 0
 def MeanDegree(a, b, weight=1):
     mean1=(a+b*weight)/(weight+1)
     mean2=(mean1+180) % 360
@@ -641,7 +645,7 @@ def MeanDegree(a, b, weight=1):
     else:
         return mean2
 
-#Raw copy of ai.angleDiff, except it handles decimals
+# Same as ai.angleDiff, except it handles decimals
 #Returns the absolute value if 'absolute' is set to True
 def AngleDiff(angle1, angle2, absolute=False):
     diff = angle2 - angle1
@@ -654,7 +658,8 @@ def AngleDiff(angle1, angle2, absolute=False):
     else:
         return diff
 
-###Parse options
+
+# Parse command-line arguments.
 if len(sys.argv) == 2:
     mapFile=sys.argv[1]
     shootDistance=500 #default
