@@ -59,7 +59,9 @@ class myai:
                 ai.setTurnSpeed(64)
                 self.turnSpeedSet = True
 
-            if self.count < 1: ##Avoid having readings from before dying linger to after respawning.
+            ##Avoid having readings from before dying linger to after respawning.
+            ##Also avoids strange readings on classic
+            if self.count < 2: 
                 return
 
             #### Constants
@@ -138,7 +140,6 @@ class myai:
             
 
             # At all times we want to check if we are crashing into anything,
-            # unless we are already avoiding it.
             if CheckWall(checkDist, selfTracking):
                 self.mode = "crashing"
                 crashing = True
@@ -154,7 +155,7 @@ class myai:
                 self.mode = "dodge"
 
 
-            print(self.count, self.mode)
+            #print(self.count, self.mode)
             # State machine
 #################################################
             if self.mode == "wait":
@@ -184,7 +185,7 @@ class myai:
                 #Thrust if We're not going too fast, or if we're going in the wrong direction
                 #And we're turned in approximately the correct direction (a nonissue on NG with turnspeed 64
                 #TODO: Use 'dot product' or similar to calculate the composant of the speed in heading direction
-                if ( AdjustPower(enemyRadarDistance - self.shootDistance, selfVel) or AngleDiff(selfTracking, self.wantedHeading) > 45) and AngleDiff(selfHeading, self.wantedHeading, True) < 45:
+                if ( AdjustPower(enemyRadarDistance - self.shootDistance, selfVel) or AngleDiff(selfTracking, self.wantedHeading) > 15) and AngleDiff(selfHeading, self.wantedHeading, True) < 10:
                     thrust = True
                     
 
@@ -216,12 +217,13 @@ class myai:
                 self.wantedHeading = CounteractTracking(self.wantedHeading, selfTracking, self.options['friction'])
                 TurnToAngle(selfHeading, self.wantedHeading)
                 distanceToWall = CheckWall(checkDist, selfTracking)
-                power = selfVel*500/distanceToWall
-                print(int(power))
+                power = selfVel*500/distanceToWall #TODO: Figure out good constants, as well as take shipmass/friction into account
+                #print(int(power))
                 if power > 55:
                     power = 55
                 ai.setPower(int(power))
-                thrust = True
+                if AngleDiff(selfHeading, self.wantedHeading, True) < 15:
+                    thrust = True
 #################################################
             elif self.mode == "thrust":
                 
@@ -263,7 +265,8 @@ class myai:
                     amountOfSpread=math.ceil(1000/enemyRadarDistance)
                 spread=random.randint(-amountOfSpread,amountOfSpread)
                 TurnToAngle(selfHeading, self.wantedHeading+spread)
-                ai.fireShot()
+                if AngleDiff(selfHeading, self.wantedHeading, True) < 5:
+                    ai.fireShot()
                 
                 ##Counteract recoil if flying backwards
                 if AngleDiff(selfTracking, self.wantedHeading, True) > 135:
@@ -339,12 +342,15 @@ def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemy
     relativeY = enemyY - selfY
     relativeVelX = enemyVelX - selfVelX
     relativeVelY = enemyVelY - selfVelY
-    
     time = TimeOfImpact(relativeX, relativeY, relativeVelX, relativeVelY, bulletVel)
-
     targetX = enemyX+enemyVelX*time
     targetY = enemyY+enemyVelY*time
+    if relativeVelX < 0 or relativeVelY < 0:
+        print(relativeVelX, relativeVelY, time, targetY, enemyY+relativeVelY*time)
+        print(math.atan2(enemyY+enemyVelY*time-selfY+selfVelY*time, enemyX+enemyVelX*time-selfX+selfVelX*time)*180/math.pi)
     targetAngle = ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))
+    print(targetAngle, math.atan2(enemyY+enemyVelY*time-selfY+selfVelY*time, enemyX+enemyVelX*time-selfX+selfVelX*time)*180/math.pi)
+    targetAngle = math.atan2(enemyY+enemyVelY*time-selfY+selfVelY*time, enemyX+enemyVelX*time-selfX+selfVelX*time)*180/math.pi
     return targetAngle
 
 def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
@@ -353,16 +359,17 @@ def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
 # inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 # WARNING This might not be correctly implemented.
 #TODO: Does not seem to work correctly when enemy is standing still and we are moving. Error might be in this function.
-    a = bulletSpeed ** 2 - (targetSpeedX * targetSpeedX + targetSpeedY * targetSpeedY)
+    a = bulletSpeed ** 2 - (targetSpeedX ** 2 + targetSpeedY ** 2) #Relative speed between bullet and target
     b = relativeX * targetSpeedX + relativeY * targetSpeedY
     c = relativeX ** 2 + relativeY ** 2
     d = b ** 2 + a * c 
     if a == 0 or d < 0:
+        print("a==0 or d < 0", a, d)
         return 0
     time = ( b + math.sqrt(d) ) / a
     if time < 0:
+        print("negative time: ", time)
         return 0
-
     return time
 
 # Calculates in which direction to thrust in order to travel in the desired direction, (compensates
@@ -464,6 +471,8 @@ def AdjustPower(dist, speed):
 #TODO: Include friction and mass in calculations
 #TODO: Improve in general so it works on maps with varying options
 # The ship gain roughly 2 velocity by thrusting once at 55 power.
+    if dist == 0: #Classic-specific error
+        return False
     optimalSpeed = dist/15
     ratio = speed/optimalSpeed
     diff = optimalSpeed - speed
@@ -472,8 +481,9 @@ def AdjustPower(dist, speed):
         return False
     elif speed + 4 > optimalSpeed:
         ai.setPower(20)
+        return True
     else:
-        print(optimalSpeed, speed, diff)
+        #print(optimalSpeed, speed, diff)
         ai.setPower(55)
         return True
         
@@ -709,9 +719,9 @@ AI_loop()
 
 (options, args) = parser.parse_args()
 port = 15345 + options.group
-name = "H-CLASS_MINION-" + str(random.randint(100000, 999999))
+name = "H-MINION-" + str(random.randint(100000, 999999))
 
 
 # The command line arguments to xpilot can be given in the list in the second argument
 # TODO: Passing arguments to xpilot crashes on NG, due to line 2250 and 2251 in pyAI.c causing core dumps.
-ai.start(AI_loop,[])#"-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
+ai.start(AI_loop,["-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])

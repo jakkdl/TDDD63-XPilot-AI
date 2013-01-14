@@ -15,7 +15,6 @@ $ xpilots
 Useful flags are
     -map /path/to/map.xp Load another map than the default
     -noQuit             The server doesn't quit when it gets empty
-    -maxIdleTime 0      The server doesn't kick inactive players, useful for testing.
     +reportToMetaServer This will avoid having other players and AI's from around the world join the game.
     -port <number>      Change default port to avoid conflicting with other servers on the same network
     -maxClientsPerIp <nr>   To increase the amount of clients that can connect from the same IP (default 2)

@@ -27,8 +27,8 @@ The actions of the ship are controlled by different states that depend on the en
 Move is the initial state.
 
 Move
-Changes state to shoot if we are close to an enemy.
-Turns in the direction of the enemy, after adjusting for walls in the way.
+Changes state to shoot if we are close to an enemy and there are no walls in the way.
+Turns in the direction of the enemy, after adjusting for walls in the way and compensating for tracking.
 Thrusts if we're going too slow, and if we're roughly in the right direction.
 If there are no enemies around, it switches mode to wait.
 
@@ -36,13 +36,13 @@ Wait
 Slows down or stops and waits for an enemy ship to spawn. This mode is used when there are no hostile ships on the radar.
 
 Shoot
-In shoot state it aims for and fires at enemies that are within shooting distance. You can, as fourth argument when starting the file, specify which range you wish to start firing. Default is 500. It will only fire if there are no obstacles between the bot and the target, if there are obstacles in the way, the bot will keep moving around the obstacle to get a clean shot. On final.xp you can't get hit by your own bullets, this might have to be adjusted on other maps so we don't fly straight into our own bullets.
+In shoot state it aims for and fires at enemies that are within shooting distance. You can, as fourth argument when starting the file, specify which range you wish to start firing. Default is 500. It will only fire if there are no obstacles between the bot and the target, if there are obstacles in the way, the bot will change state to Mode.
 
 Dodge
-All modes scan for incoming shots. This mode detects from which direction the hostile shot is coming and turns away from it if needed, as well as thrusts if need be. 
+This mode detects from which direction the hostile shot is coming and turns away from it if needed, as well as thrusts if need be. 
 
 Crashing 
-All modes constantly check if we are headed for a wall, and if such is the case it switches mode to crashing. The crashing state determines what angle to turn to avoid the wall, and changes to appropriate power. When there is no longer a risk of crashing, it switches to move mode. 
+The crashing state determines what angle to turn to avoid the wall, and changes to appropriate power. When there is no longer a risk of crashing, it switches to state Move. 
 
 
 
