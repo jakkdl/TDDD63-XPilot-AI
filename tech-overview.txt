@@ -19,7 +19,7 @@ At the turn of every tick we override the current state if we detect danger.
 
 CheckWall() is called to check if the tracking is in the direction of a wall, and if so change state to crashing.
 
-Danger() is called to check if we are close to being hit, and change state to dodge.
+Danger() is called to check if we are close to being hit, if we are, it tries to find a safe angle and thrusts in that direction. If there are no safe angles it continues into the state machine for a last stand.
 
 The state machine
 The actions of the ship are controlled by different states that depend on the environment.
@@ -38,9 +38,6 @@ Slows down or stops and waits for an enemy ship to spawn. This mode is used when
 Shoot
 In shoot state it aims for and fires at enemies that are within shooting distance. You can, as fourth argument when starting the file, specify which range you wish to start firing. Default is 500. It will only fire if there are no obstacles between the bot and the target, if there are obstacles in the way, the bot will change state to Mode.
 
-Dodge
-This mode detects from which direction the hostile shot is coming and turns away from it if needed, as well as thrusts if need be. 
-
 Crashing 
 The crashing state determines what angle to turn to avoid the wall, and changes to appropriate power. When there is no longer a risk of crashing, it switches to state Move. 
 
@@ -50,7 +47,13 @@ The functions
 This is a brief description of all functions used in the program. Major functions are called by the different states, and minor functions are called by other functions.
 
 AvoidCrash
-    Adjusts heading if we are crashing
+    Adjusts heading if we are crashing or want to go into a wall.
+
+AttemptDodge
+    Simulates ship movement in different angles to find places where we won't get hit, and thrusts in that direction
+
+SimulateNewPosition
+    Simulates position a number of ticks into the future, used by AttemptDodge
 
 Danger
     Loops through every shot ID from 0 to 99 and uses ObjectsCollide to see if they are on a collision course with the ship, and if so returns a dodge angle used to avoid being hit. If the shot is harmless (not going to hit the ship) it returns false.
