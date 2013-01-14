@@ -337,38 +337,29 @@ def Danger(selfX, selfY, selfVelX, selfVelY): #TODO: make it use 'correct' veloc
 # Returns an angle in order to aim in front of a moving enemy, taking into account its current tracking.
 # Only works when an enemey is on screen because the api won't give the neccesary data otherwise.
 def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, bulletVel):
-# TODO: Can be improved, aim's a little bad in general. Maybe merge it with AimRadar.
+# TODO: Merge with AimRadar.
     relativeX = enemyX - selfX
     relativeY = enemyY - selfY
     relativeVelX = enemyVelX - selfVelX
     relativeVelY = enemyVelY - selfVelY
     time = TimeOfImpact(relativeX, relativeY, relativeVelX, relativeVelY, bulletVel)
-    targetX = enemyX+enemyVelX*time
-    targetY = enemyY+enemyVelY*time
-    if relativeVelX < 0 or relativeVelY < 0:
-        print(relativeVelX, relativeVelY, time, targetY, enemyY+relativeVelY*time)
-        print(math.atan2(enemyY+enemyVelY*time-selfY+selfVelY*time, enemyX+enemyVelX*time-selfX+selfVelX*time)*180/math.pi)
-    targetAngle = ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))
-    print(targetAngle, math.atan2(enemyY+enemyVelY*time-selfY+selfVelY*time, enemyX+enemyVelX*time-selfX+selfVelX*time)*180/math.pi)
-    targetAngle = math.atan2(enemyY+enemyVelY*time-selfY+selfVelY*time, enemyX+enemyVelX*time-selfX+selfVelX*time)*180/math.pi
-    return targetAngle
+    targetX = relativeX+relativeVelX*time
+    targetY = relativeY+relativeVelY*time
+    return math.atan2(targetY, targetX)*180/math.pi 
 
 def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
 # Returns time until we will hit a moving target
 # Used by AimScreen()
 # inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
 # WARNING This might not be correctly implemented.
-#TODO: Does not seem to work correctly when enemy is standing still and we are moving. Error might be in this function.
     a = bulletSpeed ** 2 - (targetSpeedX ** 2 + targetSpeedY ** 2) #Relative speed between bullet and target
     b = relativeX * targetSpeedX + relativeY * targetSpeedY
     c = relativeX ** 2 + relativeY ** 2
     d = b ** 2 + a * c 
     if a == 0 or d < 0:
-        print("a==0 or d < 0", a, d)
         return 0
     time = ( b + math.sqrt(d) ) / a
     if time < 0:
-        print("negative time: ", time)
         return 0
     return time
 
