@@ -285,8 +285,8 @@ def SimulateNewPosition(noOfTicks, power, mass, friction, aimDirection, selfX, s
     #print("SIMULATING", noOfTicks,power, mass, friction, aimDirection, selfX, selfY, selfVelX, selfVelY)
     velocityX = selfVelX / 35 # coords/tick
     velocityY = selfVelY / 35 # coords/tick
-    accelerationX = math.cos(ai.degToRad(int(aimDirection))) * power * 0.0191538270185 / mass # sq/tick²
-    accelerationY = math.sin(ai.degToRad(int(aimDirection))) * power * 0.0191538270185 / mass # sq/tick²
+    accelerationX = math.cos(ai.degToRad(int(aimDirection))) * power * 0.0191538270185 / mass # sq/tick^2
+    accelerationY = math.sin(ai.degToRad(int(aimDirection))) * power * 0.0191538270185 / mass # sq/tick^2
     posX = selfX
     posY = selfY
     #print("STARTacceleration per tick", accelerationX, accelerationY)
