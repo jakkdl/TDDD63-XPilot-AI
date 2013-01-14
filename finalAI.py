@@ -20,6 +20,7 @@ parser.add_option ("-g", "--group", action="store", type="int",
                    " connecting to the server.")
 
 
+
 class myai:
 
     def __init__(self, mapFile, shootDistance):
@@ -66,8 +67,8 @@ class myai:
 
             #### Constants
             thrust = False
-            minimumCheckDist = 30
             # TODO: Calculate this from shipmass,friction and maybe more instead of having set constant. Shouldn't be needed in theory anyway?
+            minimumCheckDist = 30
 
             # Read the ships sensors. Should me moved to a separate class
             #
@@ -151,11 +152,25 @@ class myai:
             # If we are close to being hit, try and avoid
             # (Seldom works at final.xp's settings, where bullets are fast and
             # there are many of them, but it's worth a try!)
-            if Danger(selfX, selfY, selfVelX, selfVelY) != False:
+            
+            if Danger(selfX, selfY, selfVelX, selfVelY):
                 self.mode = "dodge"
+            
+            
+            
+            
+            if (Danger(selfX, selfY, selfVelX, selfVelY)):
+                # TODO either flag mode = dodge and do something crazy if AttemptDodge() fails or just let it shoot (odds are if AttemptDodge finds nothing do it's too late)
+                if (AttemptDodge(selfX, selfY, selfVel, selfVelX, selfVelY, selfTracking, selfHeading, self.options)):
+                    # AttemptDodge() prints if it dodges
+                    return
+                else:
+                    print("no direction was deemed safe")
+                # else continue with what it would do otherwise
 
+                
 
-            #print(self.count, self.mode)
+            print(self.count, self.mode)
             # State machine
 #################################################
             if self.mode == "wait":
@@ -169,7 +184,6 @@ class myai:
                 if not enemyExists:
                     self.mode = "wait"
                     return
-                
                 aimRadar = AimRadar(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
                 
                 if enemyRadarDistance < self.shootDistance and not CheckWall(enemyRadarDistance*self.radarToScreen, aimRadar):
@@ -287,6 +301,106 @@ class myai:
             e = sys.exc_info()
             print("ERROR:", e[0], "\n", e[1], "\n", traceback.extract_tb(e[2]))
 
+
+
+
+
+# This function simulates flight of 'ticks' time and returns where the ship would be after that time.
+#
+# 1 velocity = 0.0265472042476 squares per tick
+# deduced from: 1280 squares traveled in 84 seconds at reported(api) velocity 41
+#
+# acceleration = 0.0191538270185 * power / mass
+# deduced from: 0 to 500 reported(api) velocity in 18 seconds at 0 friction, 55 power and mass 20.0
+#
+# WARNING Unknown if friction or acceleration is applied first in a tick, i am assuming first for no particular reason.
+# WARNING XPilot might not be following F = ma, the values here are measured using shipmass = 20.0.
+def SimulateNewPosition(noOfTicks, power, mass, friction, aimDirection, selfX, selfY, selfVelX, selfVelY):
+    #print()
+    #print("SIMULATING", noOfTicks,power, mass, friction, aimDirection, selfX, selfY, selfVelX, selfVelY)
+    velocityX = selfVelX / 35 # coords/tick
+    velocityY = selfVelY / 35 # coords/tick
+    accelerationX = math.cos(ai.degToRad(int(aimDirection))) * power * 0.0191538270185 / mass # sq/tick²
+    accelerationY = math.sin(ai.degToRad(int(aimDirection))) * power * 0.0191538270185 / mass # sq/tick²
+    posX = selfX
+    posY = selfY
+    #print("STARTacceleration per tick", accelerationX, accelerationY)
+    #print("STARTvelocities translate into (sq/tick)", velocityX, velocityY)
+    #print("STARTstartpos", posX, posY)
+  
+    for tickNo in range(noOfTicks):
+        # Apply friction to current velocity.
+        velocityX *= 1 - friction
+        velocityY *= 1 - friction
+        #print("applying", friction, "friction, velocities are:", velocityX, velocityY)
+        # Apply 1 ticks' worth of acceleration to current velocity.
+        velocityX += accelerationX
+        velocityY += accelerationY
+        # Apply 1 ticks' worth of velocity to position.
+        posX += velocityX
+        posY += velocityY
+        #print("acceleration per tick", accelerationX, accelerationY)
+        #print("velocities (sq/tick)", velocityX, velocityY)
+        #print("pos", posX, posY)
+    #print("ENDSIM")
+    #print()
+    return (posX, posY) # Return simulated destination.
+
+
+
+
+# Returns True and dodges if it thinks it can, otherwise it does nothing and returns False.
+# How it works: simulate thrusting in different angles and look for an outcome where the ship likely doesn't get shot
+def AttemptDodge(selfX, selfY, selfVel, selfVelX, selfVelY, selfTracking, selfHeading, options):
+    NO_OF_TICKS_TO_SIMULATE = 3
+    DISTANCE_TO_CHECK_FOR_WALLS = 700
+    if (selfTracking == None):
+        selfTracking = 0
+    selfX /= 35
+    selfY /= 35
+    print("requested dodge")
+    
+    for deviation in range(18, 181, 9):
+        #print("testing deviation", deviation)
+        for direction in (1, -1):
+	  
+            angleToTest = (selfTracking + direction * deviation) % 360
+            # Hard coded value 55 power (55 is max)
+            plannedCoords = SimulateNewPosition(NO_OF_TICKS_TO_SIMULATE, 55, options['shipmass'], options['friction'], angleToTest, selfX, selfY, selfVelX, selfVelY)
+            # Is there a wall within 10 squares in that direction?
+            distanceX = plannedCoords[0] - selfX
+            distanceY = plannedCoords[1] - selfY
+            plannedEffectiveDirection = (ai.radToDeg(math.atan2(distanceY, distanceX))) % 360
+            #print("diff was X Y:", distanceX, distanceY, "which is a resulting angle:", plannedEffectiveDirection)
+            # Hard coded value: 350, amount of pixels away from ship to test for walls.
+            #print("walltest returns", CheckWall(DISTANCE_TO_CHECK_FOR_WALLS, plannedEffectiveDirection), "for direction", plannedEffectiveDirection)
+            if (CheckWall(DISTANCE_TO_CHECK_FOR_WALLS, plannedEffectiveDirection) == False):
+                #print("NO WALL")
+                # Will any bullets hit the ship if it flies in this direction?
+                # Use an average speed for bullet detection, it is not exact but hopefully good enough for a small distance.
+                averageVelX = 35 * distanceX / NO_OF_TICKS_TO_SIMULATE
+                averageVelY = 35 * distanceY / NO_OF_TICKS_TO_SIMULATE
+                #print("average velocity for the move", averageVelX, averageVelY)
+                #print("danger?", Danger(selfX * 35, selfY * 35, averageVelX, averageVelY))
+                if (not Danger(selfX * 35, selfY * 35, averageVelX, averageVelY)):
+                    # This is a good direction to dodge in; turn, thrust and return.
+                    TurnToAngle(selfHeading, angleToTest)
+                    ai.setPower(55)
+                    ai.thrust(1)
+                    print("accelerating towards", angleToTest, "current tracking", selfTracking, "resulting direction", plannedEffectiveDirection)
+                    return True
+            #else:
+                #print("WALL, continuing")
+            # There is no need to test these angles twice since they are the same in both directions.
+            if(deviation == 0 or deviation == 180):
+                break
+    # No good direction to dodge found, report failure to caller.
+    return False
+
+
+
+
+
 # Returns the degree that is safest within distance, if there are several
 # returns the one that is closest to direction
 def AvoidCrash(distance, direction, buffer):
@@ -331,7 +445,7 @@ def Danger(selfX, selfY, selfVelX, selfVelY): #TODO: make it use 'correct' veloc
             objectsCollide = ObjectsCollide(selfX, selfY, selfVelX, selfVelY, bulletX, bulletY, bulletVelX, bulletVelY)
 
             if objectsCollide:
-                return math.atan2(bulletX-selfX, bulletY-selfY)
+                return True
     return False
 
 # Returns an angle in order to aim in front of a moving enemy, taking into account its current tracking.
@@ -684,7 +798,6 @@ def AngleDiff(angle1, angle2, absolute=False):
 #            return Distance(start[0], start[1], cur[0], cur[1])
 #
 #    return -1
-        
 
 
 # Parse command-line arguments.
