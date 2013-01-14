@@ -3,70 +3,69 @@ Technical overview - xpilot AI project, group 28
 Introduction
 The approach we chose early on was to keep it all in one class. We let different modes dictate how the ship is supposed to act, and what it does by default. The states are decided based on if-loops that determine what is going on in the game. 
 
-All the functions can be called and accessed from any mode, depending on what is needed. Our reasoning for this is to allow for easier modification throughout (and possibly after) the project, along with making it easier to read. In its current form it's easy to go through, see what functions are called and used, and what they are used for. Splitting the program up into classes makes it harder to get a complete view of what is going on, and also means that the two classes may require the same function or identical variables at the same time. Therefor we feel that our approach is both more efficient and easier to work with, considering the size of the program.
+All the functions can be called and accessed from any mode, depending on what is needed. Our reasoning for this is to allow for easier modification throughout (and possibly after) the project, along with making it easier to read. In its current form it's easy to go through, see what functions are called and used, and what they are used for.
 
-The tick function is where it all happens. Everything inside of the function is done every tick. Some of it is limited to certain modes, such as finding the right angle to fire a shot at an enemy. Other things are carried out always, for example scanning for incoming bullets, and checking for walls.
+The tick function is where it all happens. Everything inside of the function is done every tick. Some of it is limited to certain modes, such as finding the right angle to fire a shot at an enemy. Other things are carried out always, for example scanning for incoming bullets. 
 
 All global variables, or variables that need to remain set between different ticks are contained in the self object.
 
-The first that is checked in each tick is whether we have died, and contains all variables that need to be reset upon death.
+The first thing that is checked in each tick is whether we have died, and the function contains all variables that need to be reset upon death.
 
 All sensor readings are then assigned to appropriate variables, to optimize with as few calls to the API as possible, and to make the code readable. The only other sensor readings are in the Danger() function, for detecting multiple bullets.
 
 
 Danger Detecting
-At every tick we override the current state if we detect danger.
+At the turn of every tick we override the current state if we detect danger.
 
-CheckWall() is called to check if the tracking is in the direction of a wall, and if so change state to turn.
+CheckWall() is called to check if the tracking is in the direction of a wall, and if so change state to crashing.
 
 Danger() is called to check if we are close to being hit, and change state to dodge.
 
 The state machine
 The actions of the ship are controlled by different states that depend on the environment.
 
-Init is the initial state. It's sole purpose is to avoid strange readings that appear directly when spawning. After two ticks it will change state to ready.
+Move is the initial state.
 
 Move
 Changes state to shoot if we are close to an enemy.
-Shoots constantly; cause it's a huge disadvantage if we only shoot when close to the enemy. At final.xp you can't get hit by your own bullets, this might have to be adjusted on other maps so we don't fly straight into our own bullets.
 Turns in the direction of the enemy, after adjusting for walls in the way.
 Thrusts if we're going too slow, and if we're roughly in the right direction.
+If there are no enemies around, it switches mode to wait.
 
-Dodge detects from which direction the opposing shot is incoming and turns away from it if needed. Changes state to thrust for two ticks.
+Wait
+Slows down or stops and waits for an enemy ship to spawn. This mode is used when there are no hostile ships on the radar.
 
-Turn turn towards the wanted heading. When close enough changes state to thrust for 5 ticks.
+Shoot
+In shoot state it aims for and fires at enemies that are within shooting distance. You can, as fourth argument when starting the file, specify which range you wish to start firing. Default is 500. It will only fire if there are no obstacles between the bot and the target, if there are obstacles in the way, the bot will keep moving around the obstacle to get a clean shot. On final.xp you can't get hit by your own bullets, this might have to be adjusted on other maps so we don't fly straight into our own bullets.
 
-Thrust thrusts for as many ticks as have been specified.
+Dodge
+All modes scan for incoming shots. This mode detects from which direction the hostile shot is coming and turns away from it if needed, as well as thrusts if need be. 
 
-Shoot turn towards the angle specified by Shoot() and shoots. Changes state to move if there are no nearby enemies.
-
+Crashing 
+All modes constantly check if we are headed for a wall, and if such is the case it switches mode to crashing. The crashing state determines what angle to turn to avoid the wall, and changes to appropriate power. When there is no longer a risk of crashing, it switches to move mode. 
 
 
 
 The functions
 This is a brief description of all functions used in the program. Major functions are called by the different states, and minor functions are called by other functions.
 
-AdjustCourse
-    Adjusts the course if there is a wall in the specified heading, would work way better if the API returned a more specified number than an int.
-    Unfortunately can only loop twice as otherwise the game suffers heavy fps drops if CheckWall is run too many times per tick.
-
 AvoidCrash
     Adjusts heading if we are crashing
 
 Danger
-    Loops through every shot ID from 0 to 99 within a radius of 200 units from the ship and tests the danger of all bullets that are hostile (have a danger rating above -1). Uses LinesCross to check if we are going to be hit, and returns a "danger rating" if so, otherwise False.
+    Loops through every shot ID from 0 to 99 and uses ObjectsCollide to see if they are on a collision course with the ship, and if so returns a dodge angle used to avoid being hit. If the shot is harmless (not going to hit the ship) it returns false.
 
-Shoot
-    Calculates in which angle we should shoot to hit a moving enemy using TimeOfImpact(). Returns a heavily randomized angle to have a chance to hit an enemy as they never stay on course.
+AimScreen
+	Aims based on screen coordinates, only works if the enemy is visible on the screen.
+
+TimeOfImpact
+	Calculates the time until collision between two objects
+
+CounteractTracking
+	Used to determine the proper angle to thrust, in order to get desired heading. Used to compensate for friction and current tracking.
 
 ClosestEnemy
     Creates clones of the closest enemy (Not all enemies, as the API doesn't support that), through the edges of the map and calculates which is the closest using Distance(). Returns X and Y coordinates which are used to be able to fly to and shoot people through the edges of the map.
-
-TimeOfImpact
-    Calculates at what time a bullet will hit the enemy. Used in Shoot().
-
-LinesCross
-    Returns whether two lines will cross, with some buffer as ships actually have a size.
 
 CheckWall
     Wrapper for ai.wallFeeler
@@ -74,10 +73,25 @@ CheckWall
 TurnToAngle
     Wrapper to use ai.turn as simple as ai.turnToDeg
 
-FlyTo
-    Returns the angle to a nonmoving enemy, slightly randomized.
+AimRadar
+	Uses radar coordinates to get the direction of the enemy.
+
+AdjustPower
+	Used to determine desired power of the ship, to adjust speeds.
 
 Distance
     Returns the distance between two objects.
 
+ParseMap / ParseMapData
+	Parses the map file for certain map specific settings.
+
+MeanDegree
+	Used for CounteractTracking to calculate appropriate angle.
+
+AngleDiff
+	Same as the built in function from the ai, but handles decimals.
+
+
+
+ 
 Written by Magnus Nielsen and John Litborn
