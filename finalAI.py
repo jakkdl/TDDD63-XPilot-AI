@@ -38,7 +38,6 @@ class myai:
         ##variables (they will change)
         self.count = 0
         self.mode = "move"
-        self.ticksLeftToThrust = 0
         self.turnSpeedSet = False
 
 
@@ -153,9 +152,6 @@ class myai:
             # (Seldom works at final.xp's settings, where bullets are fast and
             # there are many of them, but it's worth a try!)
             
-            if Danger(selfX, selfY, selfVelX, selfVelY):
-                self.mode = "dodge"
-            
             
             
             
@@ -204,25 +200,6 @@ class myai:
                     
 
 #################################################
-            ##TODO: rewrite completely, checking for individual shots is kinda bad.
-            ##Ideas: calculate mean mass of shots and avoid, or find "clean areas" and go to
-            ##If possible check the math, sometimes we don't even dodge individual shots
-            elif self.mode == "dodge":
-                self.mode = "move"
-                incAngle = Danger(selfX, selfY, selfVelX, selfVelY)
-                if selfTracking == None:
-                    self.mode = "move" ###Dirty fix until it's been rewritten
-                    return
-                if ai.angleDiff(int(incAngle), int(selfTracking+180)) < 5: ##TODO: Ugly hack
-                    #print("Changing angle not to charge into shot")
-                    self.wantedHeading = selfTracking+45 ###TODO doesn't work when selfTracking==None
-                    #self.wantedHeading = AdjustCourse(checkDist, self.wantedHeading)
-                    TurnToAngle(selfHeading, self.wantedHeading)
-
-                self.ticksLeftToThrust = 2
-                self.mode = "thrust"
-
-#################################################
             elif self.mode == "crashing":
                 if not crashing:
                     self.mode = "move"
@@ -238,18 +215,6 @@ class myai:
                 ai.setPower(int(power))
                 if AngleDiff(selfHeading, self.wantedHeading, True) < 15:
                     thrust = True
-#################################################
-            elif self.mode == "thrust":
-                
-                if self.ticksLeftToThrust > 0:
-                    ai.setPower(55)
-                    thrust = True
-                    self.ticksLeftToThrust -= 1
-                else:
-                    self.wantedDirection = ""
-                    self.mode = "move"
-                    thrust = False
-                
 #################################################
             elif self.mode == "shoot":
                 self.wantedHeading = 0
