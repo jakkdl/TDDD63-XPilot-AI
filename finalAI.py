@@ -1,9 +1,13 @@
 import libpyAI as ai
 
+#TODO: Rewrite API so it returns and can use floats and not only whole numbers (!!)
+#TODO: Add a function in the API for getting radar coordinates of enemies other than the closest one.
+# Required for more intelligent behaviour and advanced strategies
+#TODO: Figure out the physics behind speed, acceleration etc, the unit of velocity is ~0.9pixels/frame
+
 import random
 import sys
 import math
-import time ###TODO: remove this when done testing
 import traceback
 
 from optparse import OptionParser
@@ -18,10 +22,8 @@ parser.add_option ("-g", "--group", action="store", type="int",
 
 class myai:
 
-    #
-    # This function is executed when the class instance (the object) is created.
-    #
     def __init__(self, mapFile, shootDistance):
+        #TODO: move sensor readings to a separate class, accessible from all functions, so we don't need to pass so many arguments to functions
 
         random.seed()
 
@@ -30,7 +32,7 @@ class myai:
         self.shootDistance = int(shootDistance)
         self.mapSize = self.options['mapwidth']*35 ##Assumes it's a square
         self.radarSize = 256 #The same for all maps (No clue what happens if the map isn't a square)
-        self.radarToScreen = self.mapSize / self.radarSize
+        self.radarToScreen = self.mapSize / self.radarSize #TODO: Account for map setting maxvisibilitydistance and playersvisibleonradar
 
         ##variables (they will change)
         self.count = 0
@@ -57,14 +59,15 @@ class myai:
                 ai.setTurnSpeed(64)
                 self.turnSpeedSet = True
 
-            if self.count == 1: ##Avoid strange readings
+            if self.count < 1: ##Avoid having readings from before dying linger to after respawning.
                 return
 
             #### Constants
             thrust = False
             minimumCheckDist = 30
+            # TODO: Calculate this from shipmass,friction and maybe more instead of having set constant. Shouldn't be needed in theory anyway?
 
-            # Read the ships sensors.
+            # Read the ships sensors. Should me moved to a separate class
             #
 
             #self readings
@@ -82,13 +85,13 @@ class myai:
             #enemy readings
             enemyRadarX = ai.closestRadarX()
             enemyRadarY = ai.closestRadarY()
-            enemyVel = 0
-            if enemyRadarX == -1:
+            if enemyRadarX == -1: #TODO: Won't work if map too big for radar or radar disabled, reap appropriate options and do roaming instead of waiting in that case.
                 enemyExists = False
             else:
                 enemyExists = True
             closestShip = ai.closestShipId()
             if closestShip != -1:
+                enemyOnScreen = True
                 enemyX = ai.screenEnemyXId(closestShip)
                 enemyY = ai.screenEnemyYId(closestShip)
                 enemyVel = ai.enemySpeedId(closestShip)
@@ -107,16 +110,15 @@ class myai:
                 enemyVelY = enemyVel*YComponentConst
                 if self.options['edgewrap']:
                     (enemyX, enemyY) = ClosestEnemy(selfX, selfY, enemyX, enemyY, self.mapSize)
-            #
+            else:
+                enemyOnScreen = False
+                enemyVel = 0
             # Done reading sensors
-            #
 
 
             
-            #
             # adjust sensor readings
-            #
-            if math.isnan(selfTracking): #cause nan is a bitch to check for, rather have None
+            if math.isnan(selfTracking): #It's easier to check for None than nan
                 selfTracking = None
             checkDist = int(selfVel*20)
             if checkDist < minimumCheckDist:
@@ -163,25 +165,28 @@ class myai:
                     self.mode = "move"
 #################################################
             elif self.mode == "move":
-                if enemyRadarDistance < self.shootDistance:
-                    self.mode = "shoot"
-                    return
                 if not enemyExists:
                     self.mode = "wait"
                     return
-
+                
                 aimRadar = AimRadar(enemyRadarX, enemyRadarY,selfRadarX,selfRadarY)
+                
+                if enemyRadarDistance < self.shootDistance and not CheckWall(enemyRadarDistance*self.radarToScreen, aimRadar):
+                    self.mode = "shoot"
+                    return
 
                 # Adjust course if we want to head into a wall
                 avoidCrash = AvoidCrash(enemyRadarDistance*self.radarToScreen, aimRadar, 10)
+                # Adjust thrust direction to counteract current tracking
                 counterTracking = CounteractTracking(avoidCrash, selfTracking, self.options['friction'])
                 self.wantedHeading = counterTracking
                 TurnToAngle(selfHeading, self.wantedHeading)
-                if AdjustPower(enemyRadarDistance, selfVel) or AngleDiff(selfTracking, self.wantedHeading) > 90:
-                #AngleDiff(selfHeading, self.wantedHeading, True) < 45:
+                #Thrust if We're not going too fast, or if we're going in the wrong direction
+                #And we're turned in approximately the correct direction (a nonissue on NG with turnspeed 64
+                #TODO: Use 'dot product' or similar to calculate the composant of the speed in heading direction
+                if ( AdjustPower(enemyRadarDistance - self.shootDistance, selfVel) or AngleDiff(selfTracking, self.wantedHeading) > 45) and AngleDiff(selfHeading, self.wantedHeading, True) < 45:
                     thrust = True
                     
-
 
 #################################################
             ##TODO: rewrite completely, checking for individual shots is kinda bad.
@@ -232,10 +237,7 @@ class myai:
 #################################################
             elif self.mode == "shoot":
                 self.wantedHeading = 0
-                if not enemyExists:
-                    self.mode = "move"
-                    return
-                if enemyRadarDistance > self.shootDistance:
+                if not enemyExists or enemyRadarDistance > self.shootDistance:
                     self.mode = "move"
                     return
                 if closestShip == -1:
@@ -244,16 +246,17 @@ class myai:
                     self.wantedHeading = AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemyVelY, self.options['shotspeed'])
 
 
-                if CheckWall(enemyRadarDistance*self.radarToScreen, self.wantedHeading): ##Check if there's a wall in the way
-                    self.wantedHeading = (self.wantedHeading+90)%360 ##TODO: improve, very simple atm
-                    self.ticksLeftToThrust = 1
-                    self.mode = "thrust"
+                if CheckWall(enemyRadarDistance*self.radarToScreen, self.wantedHeading):
+                    self.mode = "move"
                     return
-                        ##TODO: approximate enemy velocity when on radar
-                        #So the following can be used even when not on screen
-                        #Use a list with past coordinates, and calculate mean velocity
-                        #Use ai.closestShipId() and ai.closestRadarX/Y()
-                        ##TODO: spread=1000/distance*speed*constant , figure out approximate constant
+
+                ##TODO: approximate enemy velocity when on radar so we can aim ahead of them
+                # as well as adjust spread.
+                # Idea: Use a list with past coordinates, and calculate mean velocity
+                # Use ai.closestShipId() and ai.closestRadarX/Y()
+                # TODO: spread=constant*enemyVel/distance, figure out approximate constant.
+                # TODO: Can one use something else than the enemy velocity to figure how volatile their speed/tracking is?
+                # Eg, friction, shipmass
                 if enemyVel == 0:
                     amountOfSpread = math.ceil(100/enemyRadarDistance)
                 else:
@@ -262,13 +265,13 @@ class myai:
                 TurnToAngle(selfHeading, self.wantedHeading+spread)
                 ai.fireShot()
                 
-                ##Counteract recoil
+                ##Counteract recoil if flying backwards
                 if AngleDiff(selfTracking, self.wantedHeading, True) > 135:
-                    ai.setPower(8)
+                    ai.setPower(5) #TODO: Calculate from shipmass, shotmass and how often we shoot.
                     thrust = True
 
 #################################################
-
+            #TODO: Create a power variable and assign values to it, and then call ai.setPower() here, instead of calling API all over the place.
             if thrust:
                 ai.thrust(1)
             else:
@@ -290,6 +293,7 @@ def AvoidCrash(distance, direction, buffer):
     diff = sys.maxsize
     degrees = []
     #TODO: Write wrapper for CheckWall so we check the width of the ship and don't need as much buffer
+    # Also so we don't try to squeeze ourselves through too small gaps. (and to the side of them!)
     for degree in range(0, 181, 1): # Steps can be lowered for higher accuracy
         for mod in 1,-1:
             checkDirection = (direction+degree)%360
@@ -309,7 +313,7 @@ def AvoidCrash(distance, direction, buffer):
 # Checks if any bullet on screen is about to hit the ship (takes ship tracking into account)
 # Returns the direction the bullet is coming from (in the case of multiple bullets about to hit, it only returns the direction of one of the bullets)
 # Returns False if no bullets are in collision course.
-def Danger(selfX, selfY, selfVelX, selfVelY): #TODO: make it use 'correct' velocity, if needed
+def Danger(selfX, selfY, selfVelX, selfVelY): #TODO: make it use 'correct' velocity, if needed. Speed reported by the API is off by ~10%
     for i in range(99):
         if ai.shotAlert(i) == -1:
             return False
@@ -342,6 +346,24 @@ def AimScreen(selfX, selfY, selfVelX, selfVelY, enemyX, enemyY, enemyVelX, enemy
     targetY = enemyY+enemyVelY*time
     targetAngle = ai.radToDeg(math.atan2(targetY-selfY,targetX-selfX))
     return targetAngle
+
+def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
+# Returns time until we will hit a moving target
+# Used by AimScreen()
+# inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
+# WARNING This might not be correctly implemented.
+#TODO: Does not seem to work correctly when enemy is standing still and we are moving. Error might be in this function.
+    a = bulletSpeed ** 2 - (targetSpeedX * targetSpeedX + targetSpeedY * targetSpeedY)
+    b = relativeX * targetSpeedX + relativeY * targetSpeedY
+    c = relativeX ** 2 + relativeY ** 2
+    d = b ** 2 + a * c 
+    if a == 0 or d < 0:
+        return 0
+    time = ( b + math.sqrt(d) ) / a
+    if time < 0:
+        return 0
+
+    return time
 
 # Calculates in which direction to thrust in order to travel in the desired direction, (compensates
 # for our current tracking)
@@ -378,7 +400,7 @@ def CounteractTracking (heading, tracking, friction):
     if resultRad == None:
         return heading
     result=resultRad*radToDeg
-    weight=length*(1-friction*20) #TODO: Adjust constants
+    weight=length*(1-friction*20) #TODO: Adjust constants to work on a wide variety of maps. Should account for shipmass as well.
     avgResult=MeanDegree(heading, result, weight)
     return avgResult
 
@@ -396,23 +418,6 @@ def ClosestEnemy(selfX, selfY, enemyX, enemyY, mapConstant):
                 minDistance = distance
     return (minX, minY)
 
-def TimeOfImpact(relativeX, relativeY, targetSpeedX, targetSpeedY, bulletSpeed):
-# Returns time until we will hit a moving target
-# Used by AimScreen()
-# inspired by: http://playtechs.blogspot.se/2007/04/aiming-at-moving-target.html
-# WARNING This might not be correctly implemented.
-    a = bulletSpeed * bulletSpeed - (targetSpeedX * targetSpeedX + targetSpeedY * targetSpeedY)
-    b = relativeX * targetSpeedX + relativeY * targetSpeedY
-    c = relativeX * relativeX + relativeY * relativeY
-    d = b * b + a * c 
-    if a == 0 or d < 0:
-        return 0
-    time = ( b + math.sqrt(d) ) / a
-    if time < 0:
-        return 0
-
-    return time
-
 # Returns True if two lines will cross, used by Danger()
 def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
     if (xVel2-xVel1) == 0 or (yVel2-yVel1) == 0:
@@ -425,10 +430,12 @@ def ObjectsCollide(x1, y1, xVel1, yVel1, x2, y2, xVel2, yVel2):
         return False
 
 # Returns distance to a wall, or False if none is found.
-def CheckWall(dist, direction):
+# 'feeler' is the line that is being checked, wallCollision is the X being painted on a wall when a collision is found. #Does not work on Classic, only NG
+# Turning the drawing flags on (setting to 1) makes the API call extremely slow and should only be used for debugging.
+def CheckWall(dist, direction, drawFeelers=0, drawWallCollision=0):
     if not dist or not direction:
         return False
-    distance_to_wall = ai.wallFeeler(int(dist), int(direction), 0, 0)
+    distance_to_wall = ai.wallFeeler(int(dist), int(direction), drawFeelers, drawWallCollision)
     if int(dist) == distance_to_wall:
         return False
     else:
@@ -444,6 +451,7 @@ def TurnToAngle(currentDegree, targetDegree):
     return
 
 # Returns direction to enemy based on radar readings.
+#TODO: merge with AimScreen, use approximations of enemy velocity. todo mentioned there as well.
 def AimRadar(targetX,targetY,selfX,selfY):
     return (math.atan2(targetY-selfY,targetX-selfX))*180/math.pi
         
@@ -454,6 +462,8 @@ def Distance(x0, y0, x1, y1):
 
 def AdjustPower(dist, speed):
 #TODO: Include friction and mass in calculations
+#TODO: Improve in general so it works on maps with varying options
+# The ship gain roughly 2 velocity by thrusting once at 55 power.
     optimalSpeed = dist/15
     ratio = speed/optimalSpeed
     diff = optimalSpeed - speed
@@ -467,7 +477,9 @@ def AdjustPower(dist, speed):
         ai.setPower(55)
         return True
         
-
+# Reads the supplied mapFile (must be .xp format) and saves options that are used in calculations.
+# Also reads the map (assumes it's built up by squares) to be used by pathfinding, when that is written.
+# TODO: add support for .xp2 aka NG maps
 def ParseMap(mapFile):
     file = open(mapFile, "r")
     mapData = []
@@ -501,10 +513,12 @@ def ParseMap(mapFile):
     mapList=ParseMapData(mapData)
     return options, mapList
 
+# Not used at the moment, maybe use for pathfinding
+# TODO: Possible to read .xp2 maps?
 def ParseMapData(mapData):
     mapList=[]
     lineList=[]
-    for lineIndex in range(len(mapData)-1, -1, -1):
+    for lineIndex in range(len(mapData)-1, -1, -1): #63, 62, 61, ..., 2, 1, 0
         line=mapData[lineIndex]
         for char in line:
             if char == 'x':
@@ -529,7 +543,7 @@ def MeanDegree(a, b, weight=1):
         return mean2
 
 # Same as ai.angleDiff, except it handles decimals
-#Returns the absolute value if 'absolute' is set to True
+# Returns the absolute value if 'absolute' is set to True
 def AngleDiff(angle1, angle2, absolute=False):
     if angle1 == None or angle2 == None:
         return 0
@@ -673,6 +687,8 @@ def AngleDiff(angle1, angle2, absolute=False):
 
 
 # Parse command-line arguments.
+# example use: python <map>
+# example: python <map> <distance to start shooting at>
 if len(sys.argv) == 2:
     mapFile=sys.argv[1]
     shootDistance=500 #default
@@ -697,5 +713,5 @@ name = "H-CLASS_MINION-" + str(random.randint(100000, 999999))
 
 
 # The command line arguments to xpilot can be given in the list in the second argument
-# 
+# TODO: Passing arguments to xpilot crashes on NG, due to line 2250 and 2251 in pyAI.c causing core dumps.
 ai.start(AI_loop,[])#"-name", name, "-join", "-fuelMeter", "yes", "-showHUD", "no", "-port", str(port)])
